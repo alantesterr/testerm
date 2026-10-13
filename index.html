@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
+<script>try{if(localStorage.getItem("studyplay-hub-theme")==="light")document.documentElement.classList.add("theme-light")}catch(e){}</script>
 <title>StudyPlay — видео и тренажёр тестов</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -589,7 +590,7 @@ body.academic-hub-active #academicHub {
 <header class="top">
  <div class="brand">◈ <span>StudyPlay</span> Academic Hub</div>
  <nav class="nav" aria-label="Навигация Academic Hub"><button id="navSchedule" class="active" type="button">▦ Расписание</button></nav>
- <div class="top-actions"><button id="scheduleHelpBtn" type="button" title="Инструкция по созданию расписания">ⓘ Инструкция</button><button id="scheduleFileBtn" class="primary" type="button">↑ Загрузить расписание</button><button id="downloadScheduleBtn" type="button">↓ Скачать расписание</button><input id="scheduleInput" type="file" hidden></div>
+ <div class="top-actions"><button id="scheduleHelpBtn" type="button" title="Инструкция по созданию расписания">ⓘ Инструкция</button><button id="scheduleFileBtn" class="primary" type="button">↑ Загрузить расписание</button><button id="downloadScheduleBtn" type="button">↓ Скачать расписание</button><input id="scheduleInput" type="file" accept=".json,.studyplay,.html,.htm,application/json,text/html" multiple hidden></div>
 </header>
 <section class="container" id="app"></section>
 <div class="toast" id="toast" role="status"></div>
@@ -1823,7 +1824,7 @@ function spSync(){clearTimeout(spT);
   bankName=spFiles.length?spFiles.map(f=>f.name).join(', '):(dz.length?'Дизайнер тестов':'');
   bankChanged();spSaveMeta();spSaveDraft();spDirty=false;spUpdSetup()}
 function spSaveDraft(){try{localStorage.setItem('studyplay-draft',JSON.stringify({ts:Date.now(),dz}))}catch(e){if(!spDraftWarned){spDraftWarned=true;spToast('Черновик не поместился в память браузера (слишком много изображений). Сохраните тест файлом.','warn')}}}
-function spUpdSetup(){const g=$('#go');if(g)g.disabled=!all.length;const t=$('#total');if(t)t.textContent=all.length}
+function spUpdSetup(){const g=$('#go');if(g)g.disabled=false;const t=$('#total');if(t)t.textContent=all.length;const c=$('#cnt');if(c){c.max=Math.max(1,all.length);if(parseInt(c.value)>all.length&&all.length)c.value=all.length}}
 
 /* ---- загрузка файлов ---- */
 async function spIngest(list){
@@ -1856,19 +1857,19 @@ function start(){
  const hasF=spFiles.length>0,full=spFiles.length>=SP_MAX;
  const list=spFiles.map(f=>`<div class="fitem"><span class="fn" title="${esc(f.name)}">📄 ${esc(f.name)}</span><span class="fc">✓ ${f.count} ${spPl(f.count)}</span>${f.bad?`<span class="fe">⚠ ошибок: ${f.bad}</span>`:''}<button type="button" class="fx" data-rm="${f.id}" title="Убрать файл" aria-label="Убрать файл">×</button></div>`).join('');
  app.innerHTML=`<div class="sp-head"><h1 class="sp-title">Тестер для Platonus</h1><button type="button" class="sp-help" id="helpBtn" title="Инструкция" aria-label="Инструкция">${SP_HELP_SVG}</button></div>
- <div class="card sp-main"><div class="sp-actions"><label class="up-btn ${full?'dis':''}" for="file" id="upBtn">${full?'Лимит '+SP_MAX+' файлов':hasF?'➕ Загрузить ещё файл':'📄 Загрузить тесты'}</label><button type="button" class="go" id="go" ${all.length?'':'disabled'}>▶ Начать тест</button></div>
+ <div class="card sp-main"><div class="sp-actions"><label class="up-btn ${full?'dis':''}" for="file" id="upBtn">${full?'Лимит '+SP_MAX+' файлов':hasF?'➕ Загрузить ещё файл':'📄 Загрузить файл'}</label><button type="button" class="go" id="go">▶ Начать тест</button></div>
   <div class="mute" style="margin-top:10px">${hasF?'Можно добавить ещё файлы — вопросы объединятся. Файлы можно перетащить на эту карточку.':'Поддерживаются .txt, .doc, .docx и .studyplay.json. Файлы можно перетащить на эту карточку.'}</div>
   <input type="file" id="file" class="hide" multiple><div id="msg"></div></div>
- <div id="editorHost"></div>
- ${(hasF||all.length)?`<div class="card sp-bottom" id="spBottom"><h2 style="margin:0 0 4px">📚 Загруженные файлы <span class="mute" style="font-weight:400">· ${spFiles.length} из ${SP_MAX}</span>${qh('Файлы объединяются в один тест: загружайте их по одному или сразу несколько (до '+SP_MAX+').\nКрестик × убирает файл вместе с его вопросами.')}</h2><div class="flist" id="flist">${list}</div>
- <div class="sp-params"><label for="cnt"><b>Сколько вопросов задать</b></label><input type="number" id="cnt" min="1" value="${spCnt}"><span class="mute">Выберем случайно из <b id="total" style="color:var(--ink)">${all.length}</b> загруженных вопросов</span>${qh('Если указать больше, чем загружено, в тест войдут все вопросы. По умолчанию — 40.')}</div></div>`:''}`;
+ <div class="card sp-bottom" id="spBottom"><div class="sp-stat">Загружено вопросов: <b id="total">${all.length}</b></div><div class="sp-params" style="margin-top:0;padding-top:0;border-top:0"><label for="cnt"><b>Сколько вопросов выбрать:</b></label><input type="number" id="cnt" min="1" max="${Math.max(1,all.length)}" value="${Math.max(1,Math.min(spCnt,all.length||1))}">${qh('Вопросы выбираются случайно из всех загруженных. Выбрать больше, чем загружено, нельзя.')}</div><h2 style="margin:18px 0 4px">📚 Загруженные файлы <span class="mute" style="font-weight:400">· ${spFiles.length} из ${SP_MAX}</span>${qh('Файлы объединяются в один тест: загружайте их по одному или сразу несколько (до '+SP_MAX+').\nКрестик × убирает файл вместе с его вопросами.')}</h2><div class="flist" id="flist">${list||'<div class="mute">Файлы ещё не загружены.</div>'}</div></div>
+ <div id="editorHost"></div>`;
  const f=$('#file');
  f.onchange=()=>{const l=[...f.files];f.value='';if(l.length)spIngest(l)};
  const mc=$('.sp-main');mc.ondragover=e=>{e.preventDefault();mc.classList.add('over')};mc.ondragleave=()=>mc.classList.remove('over');mc.ondrop=e=>{e.preventDefault();mc.classList.remove('over');if(e.dataTransfer.files.length)spIngest(e.dataTransfer.files)};
  const fl=$('#flist');if(fl)fl.onclick=e=>{const b=e.target.closest('[data-rm]');if(b)spRemove(b.dataset.rm)};
  const cn=$('#cnt');if(cn)cn.oninput=()=>{const v=parseInt(cn.value);if(v>0){spCnt=v;try{localStorage.setItem('studyplay-cnt',String(v))}catch(e){}}};
+ if(cn)cn.onchange=()=>{let v=parseInt(cn.value)||1;v=Math.max(1,Math.min(v,Math.max(1,all.length)));cn.value=v;spCnt=v;try{localStorage.setItem('studyplay-cnt',String(v))}catch(e){}};
  $('#helpBtn').onclick=()=>{const h=$('#helpOverlay');if(h)h.classList.add('show')};
- $('#go').onclick=()=>{spSync();if(all.length)begin()};
+ $('#go').onclick=()=>{spSync();if(all.length)begin();else msg('Нет загруженных вопросов: сначала загрузите файл с тестом, затем нажмите «Начать тест».')};
  if(edOpen){edShown?renderEditor():renderEdBar()}
  if(typeof spMark==='function')spMark();
 }
@@ -1986,13 +1987,13 @@ try{const c=parseInt(localStorage.getItem('studyplay-cnt'));if(c>0)spCnt=c}catch
 const spZone=document.getElementById('testZoneDock'),spDock=document.getElementById('testerDockControls'),spAnchor=document.createComment('zone');
 spZone.before(spAnchor);
 const spNav=document.createElement('nav');spNav.id='spNav';spNav.setAttribute('aria-label','Главное меню');
-spNav.innerHTML='<span class="brand-sm">StudyPlay</span><button type="button" class="navb" data-v="home">🏠 Главный экран</button><button type="button" class="navb" data-v="designer">✏️ Дизайнер тестов</button><button type="button" class="navb" data-v="player" id="navPlayer">▶ Плеер</button><button type="button" class="navb" data-v="schedule" id="navScheduleHub">▦ Расписание</button><button type="button" class="navb navr" data-v="pw" id="navPw">🔑 Ввод пароля</button>';
+spNav.innerHTML='<span class="brand-sm">StudyPlay</span><button type="button" class="navb" data-v="schedule" id="navScheduleHub">📅 Расписание</button><button type="button" class="navb" data-v="home">✍️ Тестер</button><div class="navr"><button type="button" class="navb icon" id="navTheme" title="Светлая / тёмная тема" aria-label="Сменить тему">🌓</button><button type="button" class="navb" id="navMore" aria-haspopup="true" aria-expanded="false">⋯ Ещё</button><div id="moreMenu" role="menu"><div class="mh">Разделы</div><button type="button" data-v="designer">✏️ Дизайнер тестов</button><button type="button" data-v="player" id="navPlayer">▶ Плеер</button><button type="button" data-v="pw" id="navPw">🔑 Ввод пароля</button><button type="button" data-act="pomo">🍅 Таймер Помодоро</button><hr><div class="mh">Расписание</div><button type="button" data-act="sched-load">📤 Загрузить расписание (JSON, .studyplay, HTML)</button><button type="button" data-act="sched-dl">📥 Скачать расписание</button><button type="button" data-act="sched-help">ⓘ Инструкция по расписанию</button><hr><div class="mh">Данные курса (GitHub)</div><button type="button" data-act="gh-refresh">🔄 Обновить данные курса</button><button type="button" data-act="gh-export">⬆ Экспорт для GitHub</button><button type="button" data-act="author">📋 Памятка для автора</button><hr><button type="button" data-act="help">📘 Инструкция StudyPlay</button></div></div>';
 document.body.prepend(spNav);
 function spGate(open){const g=$('#passwordGate');g.classList.toggle('open',!!open);if(open){const st=$('#passwordStatus');if(!st.textContent){st.style.color='#ffd666';st.textContent='Введите пароль, чтобы открыть плеер'}setTimeout(()=>$('#playerPassword').focus(),30)}}
 function spMark(){const v=document.body.classList.contains('academic-visible')?'schedule':(document.body.classList.contains('player-unlocked')?'player':spView);
  spNav.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
  $('#navPlayer').textContent=spPwOk?'▶ Плеер':'🔒 Плеер';
- $('#navPw').textContent=spPwOk?'🔓 Закрыть доступ':'🔑 Ввод пароля'}
+ $('#navPw').textContent=spPwOk?'🔓 Закрыть доступ':'🔑 Ввод пароля';const mb=document.getElementById('navMore');if(mb)mb.classList.toggle('on',v==='player'||v==='designer')}
 function spLeavePlayer(){
  try{document.getElementById('mediaVideo').pause();document.getElementById('mediaAudio').pause()}catch(e){}
  document.body.classList.remove('player-unlocked','tester-dock-open');spAnchor.after(spZone)}
@@ -2270,17 +2271,18 @@ const DEFAULT_TIMES=[
  ['12:30:00','13:20:00'],['13:30:00','14:20:00'],['14:30:00','15:20:00'],['15:30:00','16:20:00']
 ];
 const $=s=>document.querySelector(s);
-let mineOpen=false,weekOff=0;
+let mineOpen=false,weekOff=0,pickDate=null;
 let mobileDay=null,data=loadData(),page='schedule',selectedSubject=null,subjectTab='materials',pendingTarget=null;
-function emptyData(){return {version:1,updatedAt:new Date().toISOString(),schedule:[],timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]})),subjects:[],shared:[]}}
+function emptyData(){return {version:1,updatedAt:new Date().toISOString(),schedule:[],timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]})),subjects:[],shared:[],pins:{},scheduleOwn:false}}
 function loadData(){try{const x=JSON.parse(localStorage.getItem(STORE));return normalize(x)}catch(e){return emptyData()}}
-function normalize(x){if(!x||typeof x!=='object')return emptyData();const d=emptyData();d.schedule=Array.isArray(x.schedule)?x.schedule:[];d.timeSlots=Array.isArray(x.timeSlots)&&x.timeSlots.length?x.timeSlots:d.timeSlots;d.subjects=Array.isArray(x.subjects)?x.subjects.map(s=>({...s,materials:Array.isArray(s.materials)?s.materials:[],tests:Array.isArray(s.tests)?s.tests:[],notes:String(s.notes||'')})):[];d.shared=normShared(x.shared);return d}
-function save(){data.updatedAt=new Date().toISOString();try{localStorage.setItem(STORE,JSON.stringify(data,function(k,v){return(k==='content'&&this&&this.stored)?undefined:v}));return true}catch(e){toast('Не удалось сохранить: хранилище браузера заполнено. Скачайте расписание и удалите крупные вложения.','error');return false}}
+function normalize(x){if(!x||typeof x!=='object')return emptyData();const d=emptyData();d.schedule=Array.isArray(x.schedule)?x.schedule:[];d.timeSlots=Array.isArray(x.timeSlots)&&x.timeSlots.length?x.timeSlots:d.timeSlots;d.subjects=Array.isArray(x.subjects)?x.subjects.map(s=>({...s,materials:Array.isArray(s.materials)?s.materials:[],tests:Array.isArray(s.tests)?s.tests:[],notes:String(s.notes||'')})):[];d.shared=[];d.pins=(x.pins&&typeof x.pins==='object')?x.pins:{};d.scheduleOwn=x.scheduleOwn===undefined?d.schedule.length>0:!!x.scheduleOwn;return d}
+function persistView(){const own=!!data.scheduleOwn;return{...data,shared:[],schedule:own?data.schedule:[],timeSlots:own?data.timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]})),subjects:data.subjects.filter(s=>!s.base||hasOwn(s)).map(s=>{const{base,...r}=s;return{...r,materials:(s.materials||[]).filter(f=>!f.base),tests:(s.tests||[]).filter(f=>!f.base)}})}}
+function save(){data.updatedAt=new Date().toISOString();try{localStorage.setItem(STORE,JSON.stringify(persistView(),function(k,v){return(k==='content'&&this&&this.stored)?undefined:v}));return true}catch(e){toast('Не удалось сохранить: хранилище браузера заполнено. Скачайте расписание и удалите крупные вложения.','error');return false}}
 let idbDb=null,idbTried=false;
 function ensureIDB(){if(idbDb||idbTried)return Promise.resolve(idbDb);return new Promise(res=>{try{if(!window.indexedDB){idbTried=true;res(null);return}const r=indexedDB.open('studyplay-academic',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>{idbDb=r.result;idbTried=true;res(idbDb)};r.onerror=()=>{idbTried=true;res(null)};r.onblocked=()=>{idbTried=true;res(null)}}catch(e){idbTried=true;res(null)}})}
 function idbReq(mode,fn){return ensureIDB().then(db=>{if(!db)throw Error('IndexedDB недоступна');return new Promise((ok,no)=>{const t=db.transaction('files',mode),rq=fn(t.objectStore('files'));t.oncomplete=()=>ok(rq&&rq.result);t.onerror=()=>no(t.error);t.onabort=()=>no(t.error)})})}
 const idbPut=(id,v)=>idbReq('readwrite',st=>st.put(v,id)),idbGet=id=>idbReq('readonly',st=>st.get(id)),idbDel=id=>idbReq('readwrite',st=>st.delete(id));
-function allFiles(){return data.subjects.flatMap(x=>[...(x.materials||[]),...(x.tests||[])])}
+function allFiles(){return data.subjects.flatMap(x=>[...(x.materials||[]),...(x.tests||[])]).filter(f=>!f.base&&f.kind!=='link')}
 async function persistFile(f){if(!f.content)return;try{await idbPut(f.id,f.content);f.stored=true}catch(e){f.stored=false}}
 function dropFile(f){if(f&&f.id)idbDel(f.id).catch(()=>{})}
 async function loadAllContent(){let changed=false;for(const f of [...allFiles(),...sharedFiles()]){if(f.content&&!f.stored){await persistFile(f);if(f.stored)changed=true}else if(!f.content&&f.stored){try{const c=await idbGet(f.id);if(c)f.content=c;else f.missing=true}catch(e){f.missing=true}}}if(changed)save()}
@@ -2292,7 +2294,7 @@ function toast(msg,type='ok'){const t=$('#toast');t.textContent=msg;t.style.back
 function setPage(p){page=p;const ns=document.querySelector('#academicHub #navSchedule');if(ns)ns.classList.toggle('active',true);render()}
 function getSubject(id){return data.subjects.find(s=>s.id===id)}
 function openSubject(id){selectedShared=null;selectedSubject=id;subjectTab='materials';mineOpen=false;setPage('subjects');window.scrollTo(0,0)}
-function render(){document.getElementById('academicHub').dataset.page=(data.subjects.length||data.shared.length)?page:'schedule';if(!data.subjects.length&&!data.schedule.length&&!data.shared.length){$('#app').innerHTML=`<section class="panel empty"><div class="symbol">▦</div><h1>Расписание пока пусто</h1><p>Загрузите файл расписания StudyPlay (<b>.json</b> или <b>.studyplay</b>). В нём хранится всё сразу: расписание, папки предметов, материалы, тесты и заметки. Подготовить файл поможет кнопка «ⓘ Инструкция» вверху.</p><div class="empty-actions"><button class="primary" onclick="document.querySelector('#scheduleInput').click()">Загрузить расписание</button><button id="formatHelp">Посмотреть формат файла</button><button id="emptyShared">👥 Загрузить файлы сокурсника</button></div><p class="footer-note">Данные хранятся локально в этом браузере. Для переноса на другое устройство нажмите «Скачать расписание» — в файл попадёт и расписание, и все папки предметов.</p></section>`;$('#formatHelp').onclick=showFormat;$('#emptyShared').onclick=sharedPick;return}
+function render(){document.getElementById('academicHub').dataset.page=(data.subjects.length||data.shared.length)?page:'schedule';if(!data.subjects.length&&!data.schedule.length&&!data.shared.length){$('#app').innerHTML=`<section class="panel empty"><div class="symbol">▦</div><h1>Расписание пока пусто</h1><p>Загрузите файл расписания StudyPlay (<b>.json</b>, <b>.studyplay</b> или сохранённая HTML-страница расписания <b>.html</b>). В нём хранится всё сразу: расписание, папки предметов, материалы, тесты и заметки. Подготовить файл поможет кнопка «ⓘ Инструкция» вверху.</p><div class="empty-actions"><button class="primary" onclick="document.querySelector('#scheduleInput').click()">Загрузить расписание</button><button id="formatHelp">Посмотреть формат файла</button></div><p class="footer-note">Данные хранятся локально в этом браузере. Для переноса на другое устройство нажмите «Скачать расписание» — в файл попадёт и расписание, и все папки предметов.</p></section>`;$('#formatHelp').onclick=showFormat;return}
  if(!data.subjects.length&&!data.shared.length)page='schedule';if(page==='schedule')renderSchedule();else renderSubjects()}
 /* ===== Расписание (сетка Platonus, масштаб) и окно «Предметы» с файлами сокурсника ===== */
 const UIKEY='studyplay-sched-ui-v2',ZMIN=.3,ZMAX=2.5;
@@ -2324,6 +2326,7 @@ function lessonView(l,sj){
 
 /* --- расписание --- */
 const p2=n=>String(n).padStart(2,'0');
+const isoDate=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
 const fmtD=d=>p2(d.getDate())+'.'+p2(d.getMonth()+1)+'.'+d.getFullYear();
 function monday(){const n=new Date();n.setHours(12,0,0,0);n.setDate(n.getDate()-((n.getDay()+6)%7));return n}
 function cardHTML(l,i){
@@ -2340,13 +2343,14 @@ function withExtraSlots(base){
 function renderSchedule(){
  const slots=withExtraSlots(data.timeSlots.length?data.timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]})));
  const mon=monday();mon.setDate(mon.getDate()+7*weekOff);const td=weekOff===0?(new Date().getDay()+6)%7:-1;const sun=new Date(mon);sun.setDate(sun.getDate()+5);const wkLbl=p2(mon.getDate())+'.'+p2(mon.getMonth()+1)+' – '+p2(sun.getDate())+'.'+p2(sun.getMonth()+1);
- let h=`<div class="page-head"><div><h1>Расписание</h1><div class="muted">Неделя · понедельник — суббота</div></div><div class="row"><button id="editSchedule">✎ Редактировать расписание</button>${themeBtn()}</div></div><div class="sch-root" id="schRoot"><div class="sch-bar" role="toolbar" aria-label="Неделя и масштаб"><div class="wk" role="group" aria-label="Неделя"><button type="button" data-wk="-1" aria-label="Предыдущая неделя" title="Предыдущая неделя">‹</button><button type="button" class="wk-lbl${weekOff===0?' cur':''}" data-wk="0" title="Вернуться к текущей неделе">${wkLbl}</button><button type="button" data-wk="1" aria-label="Следующая неделя" title="Следующая неделя">›</button></div><div class="zm"><button type="button" data-act="zout" aria-label="Уменьшить">−</button><input type="range" id="schRange" min="30" max="250" step="1" aria-label="Масштаб расписания"><button type="button" data-act="zin" aria-label="Увеличить">+</button><span class="zv" id="schZv"></span></div></div>`;
+ let h=`<div class="page-head"><div><h1>Расписание</h1><div class="muted">Неделя · понедельник — суббота</div></div><div class="row">${baseChip()}<button id="editSchedule">✎ Правка</button></div></div><div class="sch-root" id="schRoot"><div class="sch-bar" role="toolbar" aria-label="Неделя и масштаб"><div class="wk-date"><input type="date" id="wkDate" aria-label="Дата" value="${isoDate(pickDate||mon)}"><button type="button" id="wkGo">Выбрать</button></div><div class="wk" role="group" aria-label="Неделя"><button type="button" data-wk="-1" aria-label="Предыдущая неделя" title="Предыдущая неделя">‹</button><button type="button" class="wk-lbl${weekOff===0?' cur':''}" data-wk="0" title="Вернуться к текущей неделе">${wkLbl}</button><button type="button" data-wk="1" aria-label="Следующая неделя" title="Следующая неделя">›</button></div><div class="zm"><button type="button" data-act="zout" aria-label="Уменьшить">−</button><input type="range" id="schRange" min="30" max="250" step="1" aria-label="Масштаб расписания"><button type="button" data-act="zin" aria-label="Увеличить">+</button><span class="zv" id="schZv"></span></div></div>`;
  h+=`<div class="sch-view" id="schView"><div class="sch-wrap" id="schWrap"><div class="sch-zoom" id="schZoom"><table class="sch2"><colgroup><col style="width:74px">${'<col>'.repeat(6)}</colgroup><thead><tr><th class="corner"></th>${DAYS.map((d,i)=>{const x=new Date(mon);x.setDate(x.getDate()+i);return`<th class="${i===td?'tdy':''}"><b>${d}</b><small>${fmtD(x)}</small></th>`}).join('')}</tr></thead><tbody>`;
  for(const s of slots){h+=`<tr><td class="tm">${esc(s.start||'')}<br>${esc(s.end||'')}</td>`;for(let d=0;d<6;d++)h+=cellHTML(data.schedule.filter(l=>Number(l.day)===d&&String(l.slotId)===String(s.id)),d===td);h+='</tr>'}
  h+=`</tbody></table></div></div></div><p class="sch-foot">Нажмите на занятие — откроется папка предмета. Масштаб: ползунок, кнопки − / +, щипок двумя пальцами или Ctrl + колесо мыши.</p></div>`;
  $('#app').innerHTML=h;
  schRoot=$('#schRoot');schView=$('#schView');schWrap=$('#schWrap');schZoom=$('#schZoom');
  $('#editSchedule').onclick=editSchedule;
+ $('#wkGo').onclick=()=>{const v=$('#wkDate').value;if(!v){toast('Выберите дату','error');return}const d=new Date(v+'T12:00:00');if(isNaN(d)){toast('Некорректная дата','error');return}const dm=new Date(d);dm.setDate(dm.getDate()-((dm.getDay()+6)%7));weekOff=Math.round((dm-monday())/(7*864e5));pickDate=d;renderSchedule()};
  schZoom.style.zoom=ui.z;showZ();wireSchedule();bindStick();requestAnimationFrame(()=>{syncBars();stickHead()})
 }
 function showZ(){$('#schZv').textContent=Math.round(ui.z*100)+'%';$('#schRange').value=Math.round(ui.z*100)}
@@ -2399,7 +2403,7 @@ function wireSchedule(){
  root.addEventListener('click',e=>{
   const sb=e.target.closest('.sc-bar button');
   if(sb){sb.parentElement.previousElementSibling.scrollBy({top:Number(sb.dataset.sc)*38,behavior:'smooth'});return}
-  const wk=e.target.closest('[data-wk]');if(wk){const v=Number(wk.dataset.wk);weekOff=v===0?0:weekOff+v;renderSchedule();return}
+  const wk=e.target.closest('[data-wk]');if(wk){const v=Number(wk.dataset.wk);weekOff=v===0?0:weekOff+v;pickDate=null;renderSchedule();return}
    const a=e.target.closest('[data-act]');
   if(a){zoomC(a.dataset.act==='zin'?1.15:1/1.15);return}
   const card=e.target.closest('.sl');if(card)openSubject(card.dataset.sid)
@@ -2414,7 +2418,7 @@ function renderSubjects(){
  const active=sh?null:(getSubject(selectedSubject)||data.subjects[0]||null);
  if(active)selectedSubject=active.id;
  const open=mineOpen||!data.subjects.length;
- const mateBtn='<button type="button" id="addMate" class="mate-btn" title="Загружаются только тесты и заметки">👥 Загрузить файлы сокурсника</button>';
+ const mateBtn='';
  const mineList=data.subjects.length?data.subjects.map(s=>`<button class="subject-item ${active&&s.id===active.id?'active':''}" data-sub="${esc(s.id)}"><b>${esc(s.code?s.code+' · ':'')}${esc(s.name)}</b><small>${(s.materials||[]).length} материалов · ${(s.tests||[]).length} тестов${mateOf(s).length?' · 👥 есть файлы сокурсника':''}</small></button>`).join(''):'<p class="muted" style="margin:0">Пока нет предметов.</p>';
  const mineGrp=`<div class="mine-grp${open?'':' closed'}"><div class="grp-head" id="mineHead"><h3>📁 Мои предметы <span class="pill">${data.subjects.length}</span></h3><button type="button" class="grp-tog" id="mineTog">${open?'▾ Свернуть':'▸ Развернуть'}</button></div><div class="${open?'':'hidden'}"><div class="subject-list">${mineList}</div><div class="form-actions"><button type="button" id="addSubject">＋ Добавить предмет</button>${active?'<button type="button" id="editSubject">✎ Изменить этот предмет</button>':''}</div></div></div>`;
  const mate=data.shared.map(g=>{
@@ -2433,7 +2437,7 @@ function renderSubjects(){
  const A=$('#app');
  $('#backSchedule').onclick=()=>{setPage('schedule');window.scrollTo(0,0)};
  $('#addSubject').onclick=()=>{selectedShared=null;mineOpen=false;subjectEditor()};
- $('#addMate').onclick=sharedPick;
+ 
  $('#mineHead').onclick=()=>{mineOpen=!open;render()};
  A.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{selectedShared=null;selectedSubject=b.dataset.sub;subjectTab='materials';mineOpen=false;render()});
  A.querySelectorAll('[data-shsub]').forEach(b=>b.onclick=()=>{const[gid,sid]=b.dataset.shsub.split('|');selectedShared={gid,sid};mineOpen=false;render()});
@@ -2443,7 +2447,7 @@ function renderSubjects(){
 }
 
 /* --- файлы сокурсников: хранятся отдельно, основное расписание не меняется, пока не нажато «Сохранить» --- */
-function sharedFiles(){return data.shared.flatMap(g=>g.subjects.flatMap(s=>[...s.materials,...s.tests]))}
+function sharedFiles(){return []}
 function normShared(a){return(Array.isArray(a)?a:[]).filter(g=>g&&typeof g==='object'&&g.id).map(g=>({...g,name:String(g.name||'Сокурсник'),timeSlots:[],schedule:[],subjects:(Array.isArray(g.subjects)?g.subjects:[]).map(s=>({...s,materials:[],tests:Array.isArray(s.tests)?s.tests:[],notes:String(s.notes||'')})).filter(s=>s.tests.length||s.notes.trim())})).filter(g=>g.subjects.length)}
 function ensureSharedInput(){let i=document.getElementById('sharedInput');if(!i){document.getElementById('academicHub').insertAdjacentHTML('beforeend','<input id="sharedInput" type="file" accept=".json,.studyplay,application/json" multiple hidden>');i=document.getElementById('sharedInput');i.addEventListener('change',async e=>{const fs=[...e.target.files];e.target.value='';if(fs.length)await importShared(fs)})}return i}
 function sharedPick(){ensureSharedInput().click()}
@@ -2504,14 +2508,14 @@ async function mergeAllShared(){
  return{nt,nn}
 }
 
-function materialsView(s){return `<div class="form-actions"><button class="primary" id="uploadMaterials">＋ Загрузить материалы</button></div><input id="localMaterialInput" type="file" multiple hidden>${s.materials.length?s.materials.map((f,i)=>fileRow(f,i,'material')).join(''):'<p class="muted">Пока нет материалов. Добавьте конспекты, презентации или PDF.</p>'}`}
-function testsView(s){return `<div class="form-actions"><button class="primary" id="uploadTests">＋ Добавить файл теста</button></div><input id="localTestInput" type="file" multiple hidden>${s.tests.length?s.tests.map((f,i)=>fileRow(f,i,'test')).join(''):'<p class="muted">Пока нет тестов. Можно загрузить TXT, DOCX или JSON-файл теста.</p>'}`}
+
+
 function notesView(s){return `<label for="subjectNotes">Личные конспекты и напоминания</label><textarea id="subjectNotes" placeholder="Записывайте здесь важные определения, вопросы преподавателю и планы подготовки…">${esc(s.notes)}</textarea><div class="row"><button class="primary" id="saveNotes">Сохранить заметки</button><span class="note-status" id="noteStatus">Заметки также сохраняются автоматически</span></div>`}
-function fileRow(f,i,type){return `<div class="file-row"><div class="file-icon">${type==='test'?'🧠':iconFor(f.name)}</div><div class="file-info"><b>${esc(f.name)}</b><small>${esc(f.sizeLabel||formatSize(f.size||0))}${f.type?' · '+esc(f.type):''}</small></div><div class="file-actions"><button data-preview="${type}:${i}">${type==='test'?'▶ Открыть тест':'👁 Открыть'}</button><button data-download="${type}:${i}">Скачать</button><button class="danger" data-delete="${type}:${i}">Удалить</button></div></div>`}
+
 function iconFor(n){const ext=(n||'').split('.').pop().toLowerCase();return ({pdf:'📕',doc:'📘',docx:'📘',ppt:'📙',pptx:'📙',txt:'📄',md:'📄',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',webp:'🖼️'})[ext]||'📎'}
 function iconFor(n){const ext=(n||'').split('.').pop().toLowerCase();return ({pdf:'📕',doc:'📘',docx:'📘',ppt:'📙',pptx:'📙',txt:'📄',md:'📄'})[ext]||'📎'}
 function formatSize(n){if(n<1024)return n+' Б';if(n<1048576)return (n/1024).toFixed(1)+' КБ';return (n/1048576).toFixed(1)+' МБ'}
-function wireSubjectContent(s){$('#uploadMaterials')?.addEventListener('click',()=>$('#localMaterialInput').click());$('#uploadTests')?.addEventListener('click',()=>$('#localTestInput').click());$('#localMaterialInput')?.addEventListener('change',e=>addFiles(s,'materials',e.target.files));$('#localTestInput')?.addEventListener('change',e=>addFiles(s,'tests',e.target.files));$('#saveNotes')?.addEventListener('click',()=>{s.notes=$('#subjectNotes').value;save();$('#noteStatus').textContent='Сохранено';setTimeout(()=>{const n=$('#noteStatus');if(n)n.textContent='Заметки сохранены'},1200)});$('#subjectNotes')?.addEventListener('input',()=>{s.notes=$('#subjectNotes').value;save();$('#noteStatus').textContent='Сохраняется…'});$('#app').querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>{const [type,i]=b.dataset.preview.split(':');type==='test'?openSubjectTester(s.tests[Number(i)]):openPreview(s.materials,Number(i),type)});$('#app').querySelectorAll('[data-download]').forEach(b=>b.onclick=()=>{const [type,i]=b.dataset.download.split(':');downloadFile((type==='test'?s.tests:s.materials)[Number(i)])});$('#app').querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{const [type,i]=b.dataset.delete.split(':');if(!confirm('Удалить этот файл?'))return;const arr=(type==='test'?s.tests:s.materials);dropFile(arr[Number(i)]);arr.splice(Number(i),1);save();render()})}
+
 function fileBlob(f){try{const parts=String(f.content||'').split(',');const meta=parts[0]||'';const b64=parts.slice(1).join(',');const m=(meta.match(/data:([^;]+)/)||[])[1]||f.type||'application/octet-stream';const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:m})}catch(e){return null}}
 function openPreview(files,index,type){const f=files[index];if(!f||!f.content){toast('Содержимое файла недоступно','error');return}let shade=document.getElementById('academicPreview');if(shade)shade.remove();shade=document.createElement('div');shade.id='academicPreview';shade.innerHTML=`<div class="preview-modal"><div class="preview-head"><div><b>${esc(f.name)}</b><small>${esc(f.sizeLabel||formatSize(f.size||0))}</small></div><div class="preview-actions"><button id="prevPreview">← Предыдущий</button><button id="nextPreview">Следующий →</button><button id="fullscreenPreview">⛶ На весь экран</button><button id="downloadPreview">↓ Скачать</button><button id="closePreview">✕</button></div></div><div class="preview-body" id="previewBody"><div class="muted">Открываю файл…</div></div><div class="preview-list">${files.map((x,i)=>`<button data-preview-index="${i}" class="${i===index?'active':''}">${iconFor(x.name)} ${esc(x.name)}</button>`).join('')}</div></div>`;document.body.appendChild(shade);const bodyEl=shade.querySelector('#previewBody');function show(i){i=(i+files.length)%files.length;const x=files[i];shade.querySelector('.preview-head b').textContent=x.name;shade.querySelector('.preview-head small').textContent=x.sizeLabel||formatSize(x.size||0);shade.querySelectorAll('[data-preview-index]').forEach((b,n)=>b.classList.toggle('active',n===i));const blob=fileBlob(x);if(!blob){bodyEl.innerHTML='<div class="preview-error">Не удалось прочитать файл в браузере.</div>';return}const ext=(x.name.split('.').pop()||'').toLowerCase();const url=URL.createObjectURL(blob);bodyEl.dataset.url=url;if(['pdf'].includes(ext)){bodyEl.innerHTML=`<iframe title="${esc(x.name)}" src="${url}"></iframe>`}else if(['png','jpg','jpeg','webp','gif','svg'].includes(ext)){bodyEl.innerHTML=`<img src="${url}" alt="${esc(x.name)}">`}else if(['txt','md','rtf'].includes(ext)){const fr=new FileReader();fr.onload=()=>{bodyEl.innerHTML=`<pre>${esc(fr.result||'')}</pre>`};fr.readAsText(blob)}else if(ext==='docx'){bodyEl.innerHTML='<div class="muted">Подготавливаю документ…</div>';if(window.mammoth){blob.arrayBuffer().then(ab=>mammoth.convertToHtml({arrayBuffer:ab})).then(r=>bodyEl.innerHTML=`<article class="docx-preview">${r.value}</article>`).catch(()=>bodyEl.innerHTML='<div class="preview-error">DOCX не удалось отобразить. Используйте кнопку «Скачать».</div>')}else bodyEl.innerHTML='<div class="preview-error">Модуль просмотра DOCX не загружен.</div>' }else if(ext==='pptx'&&window.JSZip){bodyEl.innerHTML='<div class="muted">Подготавливаю слайды…</div>';JSZip.loadAsync(blob).then(async zip=>{const names=Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/i.test(n)).sort((a,b)=>Number((a.match(/slide(\d+)/i)||[])[1])-Number((b.match(/slide(\d+)/i)||[])[1]));if(!names.length)throw Error('Слайды не найдены');const slides=[];for(const name of names){const xml=await zip.file(name).async('text'),doc=new DOMParser().parseFromString(xml,'application/xml');const shapes=[...doc.getElementsByTagName('*')].filter(el=>el.localName==='sp');const lines=[];for(const sh of shapes){const tx=sh.getElementsByTagName('*');const paras=[...tx].filter(el=>el.localName==='p');for(const para of paras){const words=[...para.getElementsByTagName('*')].filter(el=>el.localName==='t').map(el=>el.textContent||'').join('');if(words.trim())lines.push(words.trim())}}slides.push(lines.join('\n\n')||'(На слайде нет извлекаемого текста)')}let si=0;bodyEl.innerHTML='<div class="pptx-stage"><article class="pptx-slide" id="pptxSlide"></article><div class="pptx-controls"><button id="pptxPrev">← Предыдущий</button><span id="pptxCount"></span><button id="pptxNext">Следующий →</button><span class="muted">Текстовый режим просмотра PPTX; оформление и анимации оригинала могут отличаться.</span></div></div>';const paint=()=>{bodyEl.querySelector('#pptxSlide').textContent=slides[si];bodyEl.querySelector('#pptxCount').textContent=`Слайд ${si+1} из ${slides.length}`;bodyEl.querySelector('#pptxPrev').disabled=si===0;bodyEl.querySelector('#pptxNext').disabled=si===slides.length-1};bodyEl.querySelector('#pptxPrev').onclick=()=>{si=Math.max(0,si-1);paint()};bodyEl.querySelector('#pptxNext').onclick=()=>{si=Math.min(slides.length-1,si+1);paint()};paint()}).catch(e=>{bodyEl.innerHTML=`<div class="preview-fallback"><h3>Не удалось отобразить слайды</h3><p>${esc(e.message)}</p><button id="fallbackDownload" class="primary">↓ Скачать файл</button></div>`;bodyEl.querySelector('#fallbackDownload').onclick=()=>downloadFile(x)})}else if(['ppt','xls','xlsx','doc'].includes(ext)){bodyEl.innerHTML=`<div class="preview-fallback"><div class="symbol">📄</div><h3>Предпросмотр этого формата ограничен браузером</h3><p>Файл сохранён в папке. Для гарантированного просмотра скачайте его и откройте в PowerPoint/Word/Excel.</p><button id="fallbackDownload" class="primary">↓ Скачать файл</button></div>`;bodyEl.querySelector('#fallbackDownload').onclick=()=>downloadFile(x)}else{bodyEl.innerHTML=`<div class="preview-fallback"><div class="symbol">📎</div><h3>Формат не поддерживает встроенный просмотр</h3><button id="fallbackDownload" class="primary">↓ Скачать файл</button></div>`;bodyEl.querySelector('#fallbackDownload').onclick=()=>downloadFile(x)}}show(index);shade.querySelector('#closePreview').onclick=()=>{const u=bodyEl.dataset.url;if(u)URL.revokeObjectURL(u);shade.remove()};shade.querySelector('#prevPreview').onclick=()=>{index=(index-1+files.length)%files.length;show(index)};shade.querySelector('#nextPreview').onclick=()=>{index=(index+1)%files.length;show(index)};shade.querySelector('#downloadPreview').onclick=()=>downloadFile(files[index]);shade.querySelector('#fullscreenPreview').onclick=()=>{const el=shade.querySelector('.preview-modal');if(document.fullscreenElement){document.exitFullscreen?.()}else{el.requestFullscreen?.();}};shade.querySelectorAll('[data-preview-index]').forEach(b=>b.onclick=()=>{index=Number(b.dataset.previewIndex);show(index)});shade.addEventListener('click',e=>{if(e.target===shade)shade.querySelector('#closePreview').click()})}
 
@@ -2546,11 +2550,263 @@ async function addFiles(s,key,files){const errs=[];let n=0;for(const f of [...fi
 function readAsDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
 function downloadFile(f){if(!f||!f.content){toast('Содержимое файла недоступно','error');return}const b=fileBlob(f);if(!b){toast('Не удалось подготовить файл','error');return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=f.name||'studyplay-file';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 function subjectEditor(s){const edit=!!s;$('#app').insertAdjacentHTML('beforeend',`<div id="modalShade" style="position:fixed;inset:0;background:#000b;z-index:50;display:grid;place-items:center;padding:16px"><form id="subjectForm" class="panel" style="width:min(520px,100%);max-height:90vh;overflow:auto;margin:0"><h2>${edit?'Редактировать предмет':'Новый предмет'}</h2><label>Название предмета *</label><input name="name" required value="${esc(s?.name||'')}" placeholder="Например, Архитектура компьютера"><label>Код предмета</label><input name="code" value="${esc(s?.code||'')}" placeholder="Например, CS-204"><label>Преподаватель</label><input name="teacher" value="${esc(s?.teacher||'')}"><div class="form-actions"><button class="primary" type="submit">Сохранить</button><button type="button" id="cancelSubject">Отмена</button>${edit?'<button type="button" class="danger" id="deleteSubject">Удалить предмет</button>':''}</div></form></div>`);$('#cancelSubject').onclick=()=>$('#modalShade').remove();$('#subjectForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.target);if(edit)Object.assign(s,{name:fd.get('name').trim(),code:fd.get('code').trim(),teacher:fd.get('teacher').trim()});else{const ns={id:uid(),name:fd.get('name').trim(),code:fd.get('code').trim(),teacher:fd.get('teacher').trim(),materials:[],tests:[],notes:''};data.subjects.push(ns);selectedSubject=ns.id}save();$('#modalShade').remove();setPage('subjects')};$('#deleteSubject')?.addEventListener('click',()=>{if(!confirm('Удалить предмет и его материалы? Связанные занятия также будут удалены.'))return;[...(s.materials||[]),...(s.tests||[])].forEach(dropFile);data.subjects=data.subjects.filter(x=>x.id!==s.id);data.schedule=data.schedule.filter(x=>x.subjectId!==s.id);selectedSubject=data.subjects[0]?.id||null;save();$('#modalShade').remove();render()})}
-function editSchedule(){const json=JSON.stringify({timeSlots:data.timeSlots,schedule:data.schedule},null,2);$('#app').insertAdjacentHTML('beforeend',`<div id="modalShade" style="position:fixed;inset:0;background:#000b;z-index:50;display:grid;place-items:center;padding:16px"><div class="panel" style="width:min(850px,100%);max-height:92vh;overflow:auto;margin:0"><h2>Редактор расписания</h2><p class="muted">Редактируйте расписание как JSON. День: 0 — понедельник, 1 — вторник, … 5 — суббота. slotId должен совпадать с id временного слота. subjectId — id предмета из мастер-файла.</p><div class="notice">Безопаснее всего сначала экспортировать мастер-файл. Пример структуры можно посмотреть в инструкции по формату.</div><label>JSON расписания и временных слотов</label><textarea id="scheduleJson" style="min-height:300px;font-family:ui-monospace,monospace">${esc(json)}</textarea><div class="form-actions"><button class="primary" id="applySchedule">Проверить и сохранить</button><button id="cancelSchedule">Отмена</button></div><div id="scheduleError" class="muted"></div></div></div>`);$('#cancelSchedule').onclick=()=>$('#modalShade').remove();$('#applySchedule').onclick=()=>{try{const x=JSON.parse($('#scheduleJson').value);if(!Array.isArray(x.schedule)||!Array.isArray(x.timeSlots))throw Error('Нужны массивы schedule и timeSlots');for(const l of x.schedule){if(!Number.isInteger(Number(l.day))||Number(l.day)<0||Number(l.day)>5)throw Error('У занятия day должен быть от 0 до 5');if(!getSubject(l.subjectId))throw Error('Не найден предмет для subjectId: '+l.subjectId)}data.schedule=x.schedule;data.timeSlots=x.timeSlots;save();$('#modalShade').remove();render();toast('Расписание сохранено')}catch(e){$('#scheduleError').textContent='Ошибка: '+e.message}}}
+function editSchedule(){const json=JSON.stringify({timeSlots:data.timeSlots,schedule:data.schedule},null,2);$('#app').insertAdjacentHTML('beforeend',`<div id="modalShade" style="position:fixed;inset:0;background:#000b;z-index:50;display:grid;place-items:center;padding:16px"><div class="panel" style="width:min(850px,100%);max-height:92vh;overflow:auto;margin:0"><h2>Редактор расписания</h2><p class="muted">Редактируйте расписание как JSON. День: 0 — понедельник, 1 — вторник, … 5 — суббота. slotId должен совпадать с id временного слота. subjectId — id предмета из мастер-файла.</p><div class="notice">Безопаснее всего сначала экспортировать мастер-файл. Пример структуры можно посмотреть в инструкции по формату.</div><label>JSON расписания и временных слотов</label><textarea id="scheduleJson" style="min-height:300px;font-family:ui-monospace,monospace">${esc(json)}</textarea><div class="form-actions"><button class="primary" id="applySchedule">Проверить и сохранить</button><button id="cancelSchedule">Отмена</button></div><div id="scheduleError" class="muted"></div></div></div>`);$('#cancelSchedule').onclick=()=>$('#modalShade').remove();$('#applySchedule').onclick=()=>{try{const x=JSON.parse($('#scheduleJson').value);if(!Array.isArray(x.schedule)||!Array.isArray(x.timeSlots))throw Error('Нужны массивы schedule и timeSlots');for(const l of x.schedule){if(!Number.isInteger(Number(l.day))||Number(l.day)<0||Number(l.day)>5)throw Error('У занятия day должен быть от 0 до 5');if(!getSubject(l.subjectId))throw Error('Не найден предмет для subjectId: '+l.subjectId)}data.schedule=x.schedule;data.timeSlots=x.timeSlots;data.scheduleOwn=true;save();$('#modalShade').remove();render();toast('Расписание сохранено')}catch(e){$('#scheduleError').textContent='Ошибка: '+e.message}}}
 function showFormat(){const example={version:1,updatedAt:new Date().toISOString(),timeSlots:[{id:'p1',start:'08:30:00',end:'09:20:00'}],subjects:[{id:'subject-cs204',code:'CS-204',name:'Архитектура компьютера',teacher:'Жак Ирина Николаевна',materials:[],tests:[],notes:''}],schedule:[{id:'lesson-1',day:0,slotId:'p1',subjectId:'subject-cs204',code:'CS-204',name:'Архитектура компьютера — Лекция',kind:'Лекция',room:'218',building:'Главный корпус',teacher:'Жак Ирина Николаевна'}]};$('#app').insertAdjacentHTML('beforeend',`<div id="modalShade" style="position:fixed;inset:0;background:#000b;z-index:50;display:grid;place-items:center;padding:16px"><div class="panel" style="width:min(850px,100%);max-height:90vh;overflow:auto;margin:0"><div class="subject-title"><h2>Формат мастер-файла</h2><button id="closeFormat">Закрыть</button></div><p class="muted">Файл .studyplay — это обычный JSON с другим расширением. Сохраните текст ниже как <code>studyplay.json</code> или <code>studyplay.studyplay</code>. Массивы материалов и tests содержат объекты файлов с полями name, type, size и content (data URL/base64). Чтобы избежать потери данных, не редактируйте вручную содержимое больших вложений.</p><textarea id="formatJson" style="min-height:350px;font-family:ui-monospace,monospace">${esc(JSON.stringify(example,null,2))}</textarea><div class="form-actions"><button class="primary" id="copyFormat">Скопировать пример</button><button id="downloadExample">Скачать пример JSON</button></div></div></div>`);$('#closeFormat').onclick=()=>$('#modalShade').remove();$('#copyFormat').onclick=async()=>{try{await navigator.clipboard.writeText($('#formatJson').value);toast('Пример скопирован')}catch(e){$('#formatJson').select();toast('Выделите и скопируйте текст вручную')}};$('#downloadExample').onclick=()=>downloadText($('#formatJson').value,'studyplay-example.json','application/json')}
 function downloadText(text,name,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+/* ===== v3: ссылки, закрепление (📌), порядок (▲▼), компактное меню (⋯) ===== */
+function normUrl(u){u=String(u||'').trim();if(!u)return'';if(!/^[a-z][a-z0-9+.-]*:/i.test(u))u='https://'+u;try{const x=new URL(u);if(!/^https?:$/.test(x.protocol))return'';return x.href}catch(e){return''}}
+function linkInfo(u){let h='';try{h=new URL(u).hostname.replace(/^www\./,'').toLowerCase()}catch(e){}
+ const is=(...d)=>d.some(x=>h===x||h.endsWith('.'+x));
+ if(is('t.me','telegram.me','telegram.org'))return{icon:'✈️',label:'Telegram',bg:'#229ed9'};
+ if(is('youtube.com','youtu.be'))return{icon:'▶',label:'YouTube',bg:'#e62117'};
+ if(is('docs.google.com'))return{icon:'📄',label:'Google Документы',bg:'#4285f4'};
+ if(is('drive.google.com'))return{icon:'📁',label:'Google Диск',bg:'#34a853'};
+ return{icon:'🔗',label:h||'Ссылка',bg:''}}
+const isPin=f=>f.base?!!(data.pins&&data.pins[f.id]):!!f.pinned;
+function viewOrder(arr){const ix=arr.map((_,i)=>i);return[...ix.filter(i=>isPin(arr[i])),...ix.filter(i=>!isPin(arr[i]))]}
+const listOf=(s,type)=>type==='test'?s.tests:s.materials;
+function itemRow(f,i,type){
+ const link=f.kind==='link',li=link?linkInfo(f.url):null;
+ const icon=link?li.icon:(type==='test'?'🧠':iconFor(f.name));
+ const meta=link?esc(li.label)+(f.note?' · '+esc(f.note):''):esc(f.sizeLabel||formatSize(f.size||0));
+ const pin=isPin(f)?'<span class="pin" title="Закреплено">📌</span>':'';
+ const inner=`<span class="file-icon"${li&&li.bg?` style="background:${li.bg};color:#fff"`:''}>${icon}</span><span class="file-info"><b>${pin}${esc(f.name)}</b><small>${meta}</small></span>`;
+ const main=link?`<a class="mat-main" href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">${inner}</a>`:`<button type="button" class="mat-main" data-open="${type}:${i}">${inner}</button>`;
+ return`<div class="mat-row${isPin(f)?' pinned':''}">${main}${f.base?'<span class="pill course" title="Добавлено из репозитория курса">от курса</span>':''}<button type="button" class="mat-more" data-more="${type}:${i}" aria-label="Действия" title="Действия">⋯</button></div>`}
+function listHtml(s,type){const arr=listOf(s,type);return`<div class="mat-list">${viewOrder(arr).map(i=>itemRow(arr[i],i,type)).join('')}</div>`}
+function materialsView(s){return`<div class="form-actions"><button class="primary" id="uploadMaterials">＋ Загрузить материалы</button><button id="addLink">＋ Добавить ссылку</button></div><input id="localMaterialInput" type="file" multiple hidden>${s.materials.length?listHtml(s,'material'):'<p class="muted">Пока нет материалов. Добавьте конспекты, презентации, PDF или ссылки (например, на Telegram).</p>'}`}
+function testsView(s){return`<div class="form-actions"><button class="primary" id="uploadTests">＋ Добавить файл теста</button></div><input id="localTestInput" type="file" multiple hidden>${s.tests.length?listHtml(s,'test'):'<p class="muted">Пока нет тестов. Можно загрузить TXT, DOCX или JSON-файл теста.</p>'}`}
+let matMenu=null;
+function closeMatMenu(){if(matMenu){matMenu.remove();matMenu=null}}
+document.addEventListener('click',e=>{if(matMenu&&!matMenu.contains(e.target))closeMatMenu()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMatMenu()});
+window.addEventListener('scroll',()=>closeMatMenu(),{passive:true});
+function openMatMenu(btn,s,type,i){
+ closeMatMenu();const arr=listOf(s,type),f=arr[i],ord=viewOrder(arr),pos=ord.indexOf(i);
+ const nb=d=>{const j=ord[pos+d];return(j!==undefined&&isPin(arr[j])===isPin(f)&&!arr[j].base)?j:-1};
+ const items=[['open','↗ Открыть',true]];
+ if(f.kind!=='link')items.push(['dl','⬇ Скачать',true]);
+ items.push(['pin',isPin(f)?'📌 Открепить':'📌 Закрепить',true],['up','▲ Переместить вверх',!f.base&&nb(-1)>=0],['down','▼ Переместить вниз',!f.base&&nb(1)>=0],['del','🗑 Удалить',!f.base]);
+ const m=document.createElement('div');m.className='mat-menu';m.setAttribute('role','menu');
+ m.innerHTML=items.map(([a,t,on])=>`<button type="button" role="menuitem" data-a="${a}"${on?'':' disabled'}>${t}</button>`).join('');
+ $('#academicHub').appendChild(m);matMenu=m;
+ const r=btn.getBoundingClientRect(),w=m.offsetWidth,h=m.offsetHeight;
+ m.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';
+ let y=r.bottom+4;if(y+h>innerHeight-8)y=Math.max(8,r.top-h-4);m.style.top=y+'px';
+ m.onclick=e=>{const b=e.target.closest('button[data-a]');if(!b||b.disabled)return;e.stopPropagation();closeMatMenu();matAct(b.dataset.a,s,type,i)}}
+function matAct(act,s,type,i){
+ const arr=listOf(s,type),f=arr[i];if(!f)return;
+ if(act==='open')return openItem(s,type,i);
+ if(act==='dl'){if(f.base){const a=document.createElement('a');a.href=f.path;a.download=f.name;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove()}else downloadFile(f);return}
+ if(act==='pin'){if(f.base){data.pins=data.pins||{};if(data.pins[f.id])delete data.pins[f.id];else data.pins[f.id]=1}else f.pinned=!f.pinned;save();render();return}
+ if(act==='up'||act==='down'){const ord=viewOrder(arr),pos=ord.indexOf(i),j=ord[pos+(act==='up'?-1:1)];if(j===undefined||arr[j].base||isPin(arr[j])!==isPin(f))return;[arr[i],arr[j]]=[arr[j],arr[i]];save();render();return}
+ if(act==='del'){if(f.base)return;if(!confirm('Удалить «'+f.name+'»?'))return;dropFile(f);arr.splice(i,1);save();render()}}
+async function openItem(s,type,i){
+ const arr=listOf(s,type),f=arr[i];if(!f)return;
+ if(f.kind==='link'){window.open(f.url,'_blank','noopener,noreferrer');return}
+ if(f.base){
+  if(type==='test'){try{if(!f.content){const r=await fetch(f.path);if(!r.ok)throw Error('HTTP '+r.status);const b=await r.blob();f.content=await readAsDataURL(b);f.type=f.type||b.type}}catch(e){toast('Не удалось загрузить тест с сайта: '+e.message,'error');return}openSubjectTester(f)}
+  else window.open(f.path,'_blank','noopener,noreferrer');
+  return}
+ if(type==='test')return openSubjectTester(f);
+ const files=arr.filter(x=>!x.base&&x.kind!=='link'&&x.content),idx=files.indexOf(f);
+ if(idx<0){toast('Содержимое файла недоступно','error');return}
+ openPreview(files,idx,type)}
+function linkEditor(s){
+ $('#app').insertAdjacentHTML('beforeend',`<div id="modalShade" style="position:fixed;inset:0;background:#000b;z-index:50;display:grid;place-items:center;padding:16px"><form id="linkForm" class="panel" style="width:min(520px,100%);max-height:90vh;overflow:auto;margin:0"><h2>Добавить ссылку</h2><label>Название *</label><input name="name" required maxlength="120" placeholder="Например, Чат группы в Telegram"><label>Ссылка (URL) *</label><input name="url" required inputmode="url" autocapitalize="off" placeholder="https://t.me/…"><label>Заметка (необязательно)</label><input name="note" maxlength="200" placeholder="Например, пароль или пояснение"><div class="form-actions"><button class="primary" type="submit">Добавить</button><button type="button" id="cancelLink">Отмена</button></div><div id="linkErr" class="muted" style="margin-top:8px"></div></form></div>`);
+ $('#cancelLink').onclick=()=>$('#modalShade').remove();
+ $('#linkForm').onsubmit=e=>{e.preventDefault();const fd=new FormData(e.target),url=normUrl(fd.get('url'));
+  if(!url){$('#linkErr').textContent='Введите корректную ссылку (http:// или https://).';return}
+  if(s.materials.some(x=>x.kind==='link'&&normUrl(x.url)===url)){$('#linkErr').textContent='Такая ссылка уже есть в этом предмете.';return}
+  s.materials.push({id:uid(),kind:'link',name:String(fd.get('name')).trim(),url,note:String(fd.get('note')||'').trim(),added:new Date().toISOString()});
+  save();$('#modalShade').remove();render();toast('Ссылка добавлена')};
+ setTimeout(()=>{const i=document.querySelector('#linkForm input[name=name]');if(i)i.focus()},30)}
+function infoModal(title,html){
+ const old=document.getElementById('infoShade');if(old)old.remove();
+ $('#app').insertAdjacentHTML('beforeend',`<div id="infoShade" style="position:fixed;inset:0;background:#000b;z-index:600;display:grid;place-items:center;padding:16px"><section class="panel" style="width:min(520px,100%);max-height:90vh;overflow:auto;margin:0"><h2 style="margin-top:0">${esc(title)}</h2><div>${html}</div><div class="form-actions"><button class="primary" id="infoOk">Понятно</button></div></section></div>`);
+ $('#infoOk').onclick=()=>$('#infoShade').remove()}
+function wireSubjectContent(s){
+ $('#uploadMaterials')?.addEventListener('click',()=>$('#localMaterialInput').click());
+ $('#uploadTests')?.addEventListener('click',()=>$('#localTestInput').click());
+ $('#localMaterialInput')?.addEventListener('change',e=>addFiles(s,'materials',e.target.files));
+ $('#localTestInput')?.addEventListener('change',e=>addFiles(s,'tests',e.target.files));
+ $('#addLink')?.addEventListener('click',()=>linkEditor(s));
+ $('#saveNotes')?.addEventListener('click',()=>{s.notes=$('#subjectNotes').value;save();$('#noteStatus').textContent='Сохранено';setTimeout(()=>{const n=$('#noteStatus');if(n)n.textContent='Заметки сохранены'},1200)});
+ $('#subjectNotes')?.addEventListener('input',()=>{s.notes=$('#subjectNotes').value;save();$('#noteStatus').textContent='Сохраняется…'});
+ const A=$('#app');
+ A.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const[t,i]=b.dataset.open.split(':');openItem(s,t,Number(i))});
+ A.querySelectorAll('[data-more]').forEach(b=>b.onclick=e=>{e.stopPropagation();const[t,i]=b.dataset.more.split(':');openMatMenu(b,s,t,Number(i))})}
+
+/* ===== v3: слои данных (репозиторий GitHub → «базовый», localStorage → «личный») ===== */
+const BASEKEY='studyplay-base-v1';
+/* Встроенное расписание на случай, если нет интернета / сайт открыт как file://.
+   Чтобы вшить расписание группы ИР252: меню «⋯ Ещё» → «Экспорт для GitHub», откройте schedule.json
+   и вставьте его subjects и schedule сюда. */
+const BUILTIN_BASE={version:'builtin-ИР252',group:'ИР252',timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]})),subjects:[],schedule:[],files:[]};
+let base=null;try{base=JSON.parse(localStorage.getItem(BASEKEY)||'null')}catch(e){}
+function buildBase(man,sch){man=man||{};sch=sch||{};const files=[];
+ (Array.isArray(man.files)?man.files:[]).forEach(f=>{if(f&&f.name)files.push(f)});
+ (Array.isArray(man.links)?man.links:[]).forEach(l=>{if(l&&l.url)files.push({...l,kind:'link',name:l.name||l.url})});
+ return{version:String(man.version||sch.version||''),fetchedAt:Date.now(),timeSlots:Array.isArray(sch.timeSlots)&&sch.timeSlots.length?sch.timeSlots:null,subjects:Array.isArray(sch.subjects)?sch.subjects:(Array.isArray(man.subjects)?man.subjects:[]),schedule:Array.isArray(sch.schedule)?sch.schedule:[],files}}
+async function fetchBase(){
+ if(location.protocol==='file:'||!navigator.onLine)return null;
+ try{
+  const get=async u=>{try{const r=await fetch(u,{cache:'no-cache'});return r.ok?await r.json():null}catch(e){return null}};
+  const[man,sch]=await Promise.all([get('data/manifest.json'),get('data/schedule.json')]);
+  if(!man&&!sch)return null;
+  return buildBase(man,sch)}catch(e){return null}}
+const hasOwn=s=>(s.materials||[]).length||(s.tests||[]).length||String(s.notes||'').trim();
+function applyBase(){
+ data.subjects.forEach(s=>{s.materials=(s.materials||[]).filter(f=>!f.base);s.tests=(s.tests||[]).filter(f=>!f.base)});
+ data.subjects=data.subjects.filter(s=>!s.base||hasOwn(s));
+ const B=base||BUILTIN_BASE,idMap=new Map();
+ for(const bs of B.subjects){if(!bs||!bs.name)continue;let m=findMine(bs);
+  if(!m){m={id:String(bs.id||'base-'+lc(cleanName(bs.name))),name:bs.name,code:bs.code||'',teacher:bs.teacher||'',materials:[],tests:[],notes:'',base:true};data.subjects.push(m)}
+  else{if(!m.teacher&&bs.teacher)m.teacher=bs.teacher;if(!m.code&&bs.code)m.code=bs.code}
+  idMap.set(bs.id,m.id)}
+ const bm=new Map(),bt=new Map();
+ for(const bf of B.files){
+  let m=bf.subjectId&&idMap.has(bf.subjectId)?data.subjects.find(x=>x.id===idMap.get(bf.subjectId)):(bf.subject?findMine({name:bf.subject,code:''}):null);
+  if(!m&&bf.subject){m={id:'base-'+lc(cleanName(bf.subject)),name:bf.subject,code:'',teacher:'',materials:[],tests:[],notes:'',base:true};data.subjects.push(m)}
+  if(!m)continue;
+  const isLink=bf.kind==='link'||(bf.url&&!bf.path),isTest=bf.kind==='test';
+  const own=isTest?m.tests:m.materials;
+  if(isLink){const u=normUrl(bf.url);if(!u||own.some(x=>x.kind==='link'&&normUrl(x.url)===u))continue}
+  else if(own.some(x=>x.name===bf.name))continue;
+  const item=isLink?{id:'base:'+normUrl(bf.url),kind:'link',name:bf.name,url:normUrl(bf.url),note:bf.note||'',base:true}
+   :{id:'base:'+(bf.path||bf.name),name:bf.name,path:bf.path,type:bf.type||'',size:bf.size||0,sizeLabel:bf.size?formatSize(bf.size):'',base:true};
+  const mp=isTest?bt:bm;if(!mp.has(m.id))mp.set(m.id,[]);mp.get(m.id).push(item)}
+ for(const s of data.subjects){if(bm.has(s.id))s.materials=[...bm.get(s.id),...s.materials];if(bt.has(s.id))s.tests=[...bt.get(s.id),...s.tests]}
+ if(!data.scheduleOwn){
+  data.timeSlots=B.timeSlots&&B.timeSlots.length?B.timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]}));
+  data.schedule=(B.schedule||[]).map(l=>({...l,subjectId:idMap.get(l.subjectId)||l.subjectId}))}
+ data.baseVersion=B.version||''}
+async function refreshBase(manual){
+ const r=await fetchBase();
+ if(!r){if(manual)toast('Не удалось загрузить данные курса (нет сети или сайт открыт локально). Используются сохранённые.','error');return}
+ const changed=!base||base.version!==r.version||(!r.version&&JSON.stringify([base.schedule,base.files])!==JSON.stringify([r.schedule,r.files]));
+ if(!changed&&!manual)return;
+ base=r;try{localStorage.setItem(BASEKEY,JSON.stringify(base))}catch(e){}
+ closeMatMenu();applyBase();render();
+ toast(changed?'Данные курса обновлены'+(r.version?' (версия '+r.version+')':'')+'. Ваши заметки и ссылки не тронуты.':'Данные курса актуальны')}
+function useCourse(){
+ if(!confirm('Показать расписание курса? Ваше личное расписание будет убрано. Предметы, материалы, ссылки, тесты и заметки сохранятся.'))return;
+ data.scheduleOwn=false;data.schedule=[];applyBase();save();render();toast('Показано расписание курса')}
+function baseChip(){const B=base||BUILTIN_BASE;
+ return(data.baseVersion?`<span class="pill" title="Базовый слой из репозитория курса">📚 от курса · ${esc(data.baseVersion)}</span>`:'')
+  +(data.scheduleOwn&&B.schedule&&B.schedule.length?'<button type="button" onclick="window.studyPlayHub.useCourse()">↺ Расписание курса</button>':'')}
+function nextVersion(){const t=new Date().toISOString().slice(0,10),m=String(base&&base.version||'').match(/^(\d{4}-\d{2}-\d{2})\.(\d+)$/);return m&&m[1]===t?t+'.'+(+m[2]+1):t+'.1'}
+function exportGithub(){
+ const safe=n=>String(n||'').replace(/[\\/:*?"<>|]+/g,'_').trim()||'предмет',ver=nextVersion(),files=[];
+ for(const s of data.subjects){const dir=safe(cleanName(s.name));
+  for(const[arr,kind]of[[s.materials,'material'],[s.tests,'test']])for(const f of arr||[]){
+   if(f.kind==='link')files.push({subject:s.name,kind:'link',name:f.name,url:f.url,note:f.note||''});
+   else files.push({subject:s.name,kind,name:f.name,path:f.base&&f.path?f.path:`data/files/${dir}/${f.name}`,size:f.size||0})}}
+ const sched={version:ver,updatedAt:new Date().toISOString(),timeSlots:data.timeSlots,subjects:data.subjects.map(s=>({id:s.id,code:s.code||'',name:s.name,teacher:s.teacher||''})),schedule:data.schedule};
+ downloadText(JSON.stringify(sched,null,2),'schedule.json','application/json');
+ setTimeout(()=>downloadText(JSON.stringify({version:ver,files},null,2),'manifest.json','application/json'),500);
+ toast('Скачаны schedule.json и manifest.json (версия '+ver+'). Положите их в папку data/ репозитория, а сами файлы — в data/files/<предмет>/.')}
+window.studyPlayHub={refreshBase,useCourse,exportGithub,infoModal};
+
+/* ===== v3: безопасный импорт (слияние); сначала проверка, потом применение ===== */
+$('#scheduleInput').addEventListener('change',async e=>{
+ const list=[...e.target.files];e.target.value='';if(!list.length)return;
+ await ensureIDB();await loadAllContent();
+ const rep={files:0,subj:0,items:0,notes:0,sched:0,schedSkipped:false,lost:0,errs:[]};
+ for(const f of list){try{
+  const txt=await f.text();let p;
+  if(/\.html?$/i.test(f.name)||/^\s*</.test(txt)){p=parseScheduleHtml(txt)}
+  else{try{p=JSON.parse(txt)}catch(x){throw Error('файл не является ни корректным JSON, ни HTML-страницей расписания')}}
+  if(!p||typeof p!=='object'||(!Array.isArray(p.subjects)&&!Array.isArray(p.schedule)))throw Error('в файле нет ни предметов (subjects), ни расписания (schedule)');
+  const inc=Array.isArray(p.schedule)?p.schedule:[];
+  for(const l of inc){if(!Number.isInteger(Number(l.day))||Number(l.day)<0||Number(l.day)>5)throw Error('у занятия «'+(l.name||'?')+'» day должен быть от 0 до 5')}
+  let takeSched=false;
+  if(inc.length){
+   if(data.scheduleOwn&&data.schedule.length)takeSched=confirm('Заменить текущее расписание расписанием из файла «'+f.name+'»?\n\nПредметы, материалы, ссылки, тесты и заметки сохранятся.');
+   else takeSched=true;
+   if(!takeSched)rep.schedSkipped=true}
+  const mapped=new Map();
+  for(const sj of(Array.isArray(p.subjects)?p.subjects:[])){if(!sj||typeof sj!=='object')continue;
+   let m=findMine(sj);
+   if(!m){m={id:(sj.id&&!data.subjects.some(x=>x.id===sj.id))?String(sj.id):uid(),name:sj.name||'Без названия',code:sj.code||'',teacher:sj.teacher||'',materials:[],tests:[],notes:''};data.subjects.push(m);rep.subj++}
+   else{if(!m.code&&sj.code)m.code=sj.code;if(!m.teacher&&sj.teacher)m.teacher=sj.teacher}
+   mapped.set(sj.id,m.id);
+   rep.items+=await mergeFiles(m.materials,sj.materials);rep.items+=await mergeFiles(m.tests,sj.tests);
+   const before=m.notes;m.notes=mergeNotes(m.notes,sj.notes);if(m.notes!==before)rep.notes++}
+  if(takeSched){
+   const sched=inc.map(l=>({...l,subjectId:mapped.get(l.subjectId)||l.subjectId})).filter(l=>{const ok=data.subjects.some(x=>x.id===l.subjectId);if(!ok)rep.lost++;return ok});
+   data.schedule=sched;if(Array.isArray(p.timeSlots)&&p.timeSlots.length)data.timeSlots=p.timeSlots;data.scheduleOwn=true;rep.sched=sched.length}
+  rep.files++}catch(err){rep.errs.push(f.name+': '+err.message)}}
+ if(rep.files){selectedSubject=data.subjects.find(x=>!x.base)?.id||selectedSubject||data.subjects[0]?.id||null;save();applyBase();setPage('schedule')}
+ const rows=[];
+ if(rep.files)rows.push(`Обработано файлов: <b>${rep.files}</b>`,`Новых предметов: <b>${rep.subj}</b>`,`Добавлено материалов, ссылок и тестов: <b>${rep.items}</b> (дубликаты пропущены)`,`Заметок дополнено: <b>${rep.notes}</b>`);
+ if(rep.sched)rows.push(`Расписание загружено, занятий: <b>${rep.sched}</b>.`);
+ if(rep.lost)rows.push(`Пропущено занятий без предмета: <b>${rep.lost}</b>.`);
+ if(rep.schedSkipped)rows.push('Ваше текущее расписание <b>не изменено</b>.');
+ if(rep.errs.length)rows.push('<span style="color:#e57373">Не удалось: '+rep.errs.map(esc).join('; ')+'</span> Ранее сохранённые данные не тронуты.');
+ infoModal(rep.files?'Импорт выполнен':'Импорт не выполнен','<p style="margin-top:0">'+rows.join('</p><p>')+'</p>')});
+
+/* ===== v3: импорт расписания из сохранённой HTML-страницы (таблица: время слева, дни сверху) ===== */
+function parseScheduleHtml(text){
+ const doc=new DOMParser().parseFromString(text,'text/html');
+ const DN=['понедельник','вторник','среда','четверг','пятница','суббота'];
+ let best=null;
+ for(const t of doc.querySelectorAll('table')){
+  for(const tr of t.rows){
+   const cells=[...tr.cells];
+   const idx=cells.map(c=>DN.findIndex(d=>lc(c.textContent).startsWith(d)));
+   if(idx.filter(i=>i>=0).length>=3){best={table:t,head:tr,cols:cells.map((c,ci)=>({ci,day:idx[ci]})).filter(x=>x.day>=0)};break}}
+  if(best)break}
+ if(!best)throw Error('в HTML не найдена таблица с днями недели (Понедельник … Суббота)');
+ const lines=el=>{const out=[];let cur='';
+  const flush=()=>{const s=cur.replace(/\s+/g,' ').trim();if(s)out.push(s);cur=''};
+  const walk=n=>{if(n.nodeType===3){cur+=n.nodeValue;return}if(n.nodeType!==1)return;
+   const tg=n.tagName;if(/^(SCRIPT|STYLE|BUTTON|SELECT|INPUT|TEXTAREA|SVG)$/.test(tg))return;
+   if(tg==='BR'){flush();return}
+   const blk=/^(DIV|P|LI|TR|TABLE|UL|OL|H\d)$/.test(tg);if(blk)flush();
+   n.childNodes.forEach(walk);if(blk)flush()};
+  walk(el);flush();return out};
+ const NOISE=/мессенджер|id\s*конф|^[▲▼▴▾⏶⏷\s]+$|^undefined$|^null$/i;
+ const CODE=/^\s*\d{3,}\)\s*/;
+ const rows=[],slotMap=new Map();
+ const all=[...best.table.rows];
+ for(const tr of all.slice(all.indexOf(best.head)+1)){
+  const cells=[...tr.cells];if(cells.length<2)continue;
+  const tm=(cells[0].textContent.match(/\d{1,2}:\d{2}/g)||[]);if(tm.length<2)continue;
+  const fix=t=>t.length===4?'0'+t:t;
+  const st=fix(tm[0])+':00',en=fix(tm[1])+':00',key=st+'|'+en;
+  if(!slotMap.has(key))slotMap.set(key,{id:'slot'+slotMap.size,start:st,end:en});
+  const offset=cells.length-best.head.cells.length;
+  for(const c of best.cols){
+   const cell=cells[c.ci+offset];if(!cell)continue;
+   const ls=lines(cell).filter(x=>!NOISE.test(x));if(!ls.length)continue;
+   const groups=[];
+   ls.forEach(x=>{if(!groups.length||CODE.test(x)&&groups[groups.length-1].length>1)groups.push([x]);else groups[groups.length-1].push(x)});
+   for(const g of groups){
+    const name=g[0];let room='',teacher=[];
+    for(const x of g.slice(1)){if(!room&&/\(.+\)|корпус|ауд/i.test(x)&&!/\d+\s*\/\s*\d+\s*ч/.test(x))room=x;else teacher.push(x)}
+    rows.push({day:c.day,slotKey:key,name,room,teacher:teacher.join(' ')})}}}
+ if(!rows.length)throw Error('в таблице не найдено ни одного занятия');
+ const slots=[...slotMap.values()].sort((a,b)=>a.start.localeCompare(b.start));
+ const subjects=[],byName=new Map();
+ const schedule=rows.map((r,i)=>{
+  let base=cleanName(r.name);const m=base.match(/^(.*?)[\s\u00a0]+(СПЗ|СРОП|СРО|ЛЗ|ЛР|ПЗ|Л|П|С)$/u);if(m&&m[1].trim())base=m[1].trim();
+  const k=lc(base);let sj=byName.get(k);
+  if(!sj){sj={id:'subj-'+(byName.size+1)+'-'+uid().slice(-4),code:'',name:base,teacher:'',materials:[],tests:[],notes:''};byName.set(k,sj);subjects.push(sj)}
+  if(!sj.teacher&&r.teacher)sj.teacher=r.teacher.replace(/\s*\(\s*\d+\s*\/\s*\d+\s*ч?\s*\)\s*$/,'').trim();
+  const slot=slots.find(s=>s.start+'|'+s.end===r.slotKey);
+  return{id:'lesson-'+(i+1),day:r.day,slotId:slot.id,subjectId:sj.id,name:r.name,room:r.room,building:'',teacher:r.teacher}});
+ return{timeSlots:slots,subjects,schedule}}
+
+$('#downloadScheduleBtn').onclick=async()=>{try{await loadAllContent();const miss=allFiles().filter(f=>!f.content).length;
+ const out={format:'StudyPlay-Academic',version:2,updatedAt:new Date().toISOString(),timeSlots:data.timeSlots,subjects:data.subjects.map(x=>{const{base,...r}=x;return{...r,materials:(x.materials||[]).filter(f=>!f.base&&(f.content||f.kind==='link')).map(cleanFile),tests:(x.tests||[]).filter(f=>!f.base&&f.content).map(cleanFile)}}),schedule:data.schedule};
+ downloadText(JSON.stringify(out),'studyplay-schedule.json','application/json');
+ toast(miss?'Расписание скачано, но '+miss+' файл(ов) не удалось включить':'Расписание скачано: расписание, предметы, материалы, ссылки, тесты и заметки',miss?'error':'ok')}catch(e){toast('Не удалось скачать: '+e.message,'error')}};
+async function mergeFiles(target,incoming){let n=0;for(const raw of(Array.isArray(incoming)?incoming:[])){if(!raw||!raw.name)continue;
+ if(raw.kind==='link'||(raw.url&&!raw.content)){const u=normUrl(raw.url);if(!u)continue;if(target.some(x=>x.kind==='link'&&normUrl(x.url)===u))continue;target.push({id:uid(),kind:'link',name:raw.name,url:u,note:raw.note||'',pinned:!!raw.pinned});n++;continue}
+ if(!raw.content)continue;if(target.some(x=>sameFile(x,raw)))continue;const f={...raw,id:uid(),stored:false};delete f.missing;delete f.base;await persistFile(f);target.push(f);n++}return n}
 $('#scheduleHelpBtn').onclick=showScheduleHelp;
-$('#downloadScheduleBtn').onclick=async()=>{try{await loadAllContent();const mr=await mergeAllShared();const miss=allFiles().filter(f=>!f.content).length;const out={format:'StudyPlay-Academic',version:2,updatedAt:new Date().toISOString(),timeSlots:data.timeSlots,subjects:data.subjects.map(x=>({...x,materials:(x.materials||[]).filter(f=>f.content).map(cleanFile),tests:(x.tests||[]).filter(f=>f.content).map(cleanFile)})),schedule:data.schedule};downloadText(JSON.stringify(out),'studyplay-schedule.json','application/json');toast((miss?'Расписание скачано, но '+miss+' файл(ов) не удалось включить':'Расписание скачано: расписание, предметы, материалы, тесты и заметки')+(mr?'. Файлы сокурсника сохранены в ваши предметы (тестов: '+mr.nt+', заметок: '+mr.nn+').':''),miss?'error':'ok');if(mr&&page==='subjects')render()}catch(e){toast('Не удалось скачать: '+e.message,'error')}};
+
 function showScheduleHelp(){
  const prompt='Ты — помощник по составлению расписания занятий для StudyPlay. На основе прикреплённого фото, скриншота, PDF, Word, Excel или текста извлеки расписание без выдумывания отсутствующих данных. Верни ТОЛЬКО корректный JSON без Markdown в формате: {"version":1,"timeSlots":[{"id":"slot1","start":"08:30:00","end":"09:20:00"}],"subjects":[{"id":"subject-1","code":"CS-101","name":"Название предмета","teacher":"ФИО преподавателя","materials":[],"tests":[],"notes":""}],"schedule":[{"id":"lesson-1","day":0,"slotId":"slot1","subjectId":"subject-1","code":"CS-101","name":"Название предмета","kind":"Лекция","room":"Аудитория","building":"Корпус","teacher":"ФИО преподавателя"}]}. day: 0 понедельник, 1 вторник, 2 среда, 3 четверг, 4 пятница, 5 суббота. Создай отдельный timeSlot для каждого времени пары, используй одинаковый slotId для одинаковых временных интервалов. Создай один объект subject на каждый уникальный предмет и используй его subjectId во всех занятиях этого предмета. Если поле не видно, оставь пустую строку или явно укажи в notes, что оно неразборчиво. Не добавляй занятий, которых нет в источнике. Верни только JSON.';
  $('#app').insertAdjacentHTML('beforeend',`<div id="modalShade" style="position:fixed;inset:0;background:#000b;z-index:500;display:grid;place-items:center;padding:16px"><section class="panel" style="width:min(760px,100%);max-height:90vh;overflow:auto;margin:0"><div class="subject-title"><div><h2 style="margin:0">Как подготовить расписание</h2><div class="muted">Подсказка скрыта в этой кнопке и не мешает таблице</div></div><button id="closeScheduleHelp">✕</button></div><ol><li>Открой ChatGPT или другой ИИ и прикрепи фото, PDF, Word, Excel либо вставь текст расписания.</li><li>Нажми «Скопировать промпт» ниже и отправь его вместе с исходником.</li><li>Попроси ИИ сохранить ответ как JSON. Загрузи файл кнопкой «Загрузить расписание».</li><li>Перед импортом проверь дни недели, время, аудитории и названия предметов. Скачивай копию расписания перед крупными изменениями.</li></ol><div class="notice">Для импорта нужен JSON с массивами <code>schedule</code> и <code>timeSlots</code>. Если файл содержит также <code>subjects</code>, StudyPlay импортирует и папки предметов. Кнопка «Скачать расписание» сохраняет в один файл и расписание, и все папки предметов (материалы, тесты, заметки).</div><label>Промпт для ИИ</label><textarea id="schedulePromptText" style="min-height:220px">${esc(prompt)}</textarea><div class="form-actions"><button class="primary" id="copySchedulePrompt">📋 Скопировать промпт</button><button id="downloadSchedulePrompt">↓ Скачать промпт .txt</button><button id="downloadScheduleTemplate">↓ Скачать шаблон JSON</button></div></section></div>`);
@@ -2561,39 +2817,24 @@ document.addEventListener('click',e=>{if(e.target.closest('#scheduleFileBtn'))$(
 /* пока открыт учебный хаб, горячие клавиши скрытого плеера не должны срабатывать */
 document.addEventListener('keydown',e=>{if(e.key==='Escape')return;if(!document.body.classList.contains('academic-visible'))return;const t=e.target;if(t&&t.closest&&t.closest('input,textarea,select'))return;e.stopImmediatePropagation()},true);
 const sameFile=(a,b)=>a.name===b.name&&(a.size||0)===(b.size||0);
-async function mergeFiles(target,incoming){let n=0;for(const raw of (Array.isArray(incoming)?incoming:[])){if(!raw||!raw.name||!raw.content)continue;if(target.some(x=>sameFile(x,raw)))continue;const f={...raw,id:uid(),stored:false};delete f.missing;await persistFile(f);target.push(f);n++}return n}
+
 function mergeNotes(a,b,label){a=String(a||'');b=String(b||'').trim();if(!b||a.trim()===b||a.includes(b))return a;return a.trim()?a.replace(/\s+$/,'')+'\n\n'+(label||'— из импортированного файла —')+'\n'+b:b}
-$('#scheduleInput').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{
- let parsed;try{parsed=JSON.parse(await f.text())}catch(x){throw Error('файл не является корректным JSON')}
- if(!parsed||!Array.isArray(parsed.schedule))throw Error('в файле нет массива schedule');
- const slots=Array.isArray(parsed.timeSlots)&&parsed.timeSlots.length?parsed.timeSlots:data.timeSlots;
- if(data.schedule.length&&!confirm('Текущее расписание будет заменено. Предметы, их материалы, тесты и заметки сохранятся и объединятся с загруженными. Продолжить?'))return;
- await ensureIDB();await loadAllContent();
- const subjects=data.subjects;const mapped=new Map();let addedSubj=0,addedFiles=0;
- for(const inc of (Array.isArray(parsed.subjects)?parsed.subjects:[])){if(!inc||typeof inc!=='object')continue;
-  const kn=String(inc.name||'').trim().toLocaleLowerCase(),kc=String(inc.code||'').trim().toLocaleLowerCase();
-  let m=subjects.find(x=>inc.id&&x.id===inc.id)||subjects.find(x=>kn&&String(x.name||'').trim().toLocaleLowerCase()===kn&&(!kc||String(x.code||'').trim().toLocaleLowerCase()===kc));
-  if(!m){m={id:(inc.id&&!subjects.some(x=>x.id===inc.id))?inc.id:uid(),name:inc.name||'Без названия',code:inc.code||'',teacher:inc.teacher||'',materials:[],tests:[],notes:''};subjects.push(m);addedSubj++}
-  else{m.name=inc.name||m.name;m.code=inc.code||m.code;m.teacher=inc.teacher||m.teacher}
-  mapped.set(inc.id,m.id);
-  addedFiles+=await mergeFiles(m.materials,inc.materials);addedFiles+=await mergeFiles(m.tests,inc.tests);
-  m.notes=mergeNotes(m.notes,inc.notes)}
- const sched=parsed.schedule.map(l=>({...l,subjectId:mapped.get(l.subjectId)||l.subjectId}));
- for(const l of sched){if(!Number.isInteger(Number(l.day))||Number(l.day)<0||Number(l.day)>5)throw Error('у занятия «'+(l.name||'?')+'» day должен быть от 0 до 5');if(!subjects.some(x=>x.id===l.subjectId))throw Error('не найден предмет для занятия: '+(l.name||l.subjectId));if(!slots.some(x=>String(x.id)===String(l.slotId)))throw Error('не найден временной слот '+l.slotId+' для занятия: '+(l.name||''))}
- data.subjects=subjects;data.schedule=sched;data.timeSlots=slots;selectedSubject=subjects[0]?.id||null;save();setPage('schedule');
- toast('Загружено: занятий '+sched.length+', новых предметов '+addedSubj+', новых файлов '+addedFiles)
-}catch(err){toast('Не удалось загрузить файл: '+err.message,'error')}finally{e.target.value=''}});
+
 /* --- светлая / тёмная тема: действует только на блок «Расписание» (и его окно «Предметы») --- */
 const THEMEKEY='studyplay-hub-theme';
 let hubLight=false;try{hubLight=localStorage.getItem(THEMEKEY)==='light'}catch(e){}
 const themeLabel=()=>hubLight?'🌙':'☀️';
 const themeTitle=()=>hubLight?'Включить тёмную тему':'Включить светлую тему';
 const themeBtn=()=>`<button type="button" class="theme-toggle" title="${themeTitle()}" aria-label="${themeTitle()}">${themeLabel()}</button>`;
-function applyTheme(){const h=document.getElementById('academicHub');if(h)h.dataset.theme=hubLight?'light':'dark';document.body.classList.toggle('hub-light',hubLight);document.querySelectorAll('#academicHub .theme-toggle').forEach(b=>{b.textContent=themeLabel();b.title=themeTitle();b.setAttribute('aria-label',themeTitle())})}
+function applyTheme(){const h=document.getElementById('academicHub');if(h)h.dataset.theme=hubLight?'light':'dark';document.body.classList.toggle('hub-light',hubLight);document.documentElement.classList.toggle('theme-light',hubLight);try{document.querySelector('meta[name=color-scheme]').content=hubLight?'light':'dark'}catch(x){}document.querySelectorAll('#academicHub .theme-toggle').forEach(b=>{b.textContent=themeLabel();b.title=themeTitle();b.setAttribute('aria-label',themeTitle())})}
 document.getElementById('academicHub').addEventListener('click',e=>{if(e.target.closest('.theme-toggle')){hubLight=!hubLight;try{localStorage.setItem(THEMEKEY,hubLight?'light':'dark')}catch(x){}applyTheme()}});
+window.__toggleTheme=function(){hubLight=!hubLight;try{localStorage.setItem(THEMEKEY,hubLight?'light':'dark')}catch(x){}applyTheme()};
 applyTheme();
+applyBase();
 render();
 ensureIDB().then(hydrate);
+refreshBase(false);
+setTimeout(()=>{const b=document.getElementById('navScheduleHub');if(b&&!document.body.classList.contains('player-unlocked'))b.click()},0);
 
 window.studyPlayAcademic={setPage:setPage,render:render,openSubject:openSubject};
 })();
@@ -2601,5 +2842,136 @@ window.studyPlayAcademic={setPage:setPage,render:render,openSubject:openSubject}
 
 
 
+<style id="v3-ui">
+/* ===== v3: единая тема, меню, расписание, материалы ===== */
+html.theme-light{color-scheme:light;--bg:#eef1f6;--card:#fff;--ink:#1c2433;--mute:#66728a;--line:#d9dfea;--acc:#2f5fd0;--ok:#1f9d63;--okbg:#e3f6ec;--bad:#d64545;--badbg:#fdeaea;--gray:#cfd6e3;--hover:#e8ecf4;--red:#d64545}
+html.theme-light body{background:var(--bg);color:var(--ink)}
+html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:background-color .25s ease,color .25s ease,border-color .25s ease!important}
+/* верхнее меню */
+#spNav{overflow:visible}
+#spNav .navr{margin-left:auto;display:flex;gap:4px;align-items:center;position:relative}
+#spNav .navb.icon{padding:9px 12px;font-size:17px;line-height:1}
+html.theme-light #spNav{background:rgba(255,255,255,.96);border-bottom-color:#d5dbe6}
+html.theme-light #spNav .brand-sm{color:#1c2433}
+html.theme-light #spNav .navb{color:#5d6980}
+html.theme-light #spNav .navb:hover{background:#eef2fa;color:#1c2433}
+html.theme-light #spNav .navb.on{background:#e6ecf8;color:#1c2433}
+#moreMenu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:260px;max-height:75vh;overflow:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.35);padding:6px;z-index:300}
+#moreMenu.open{display:block}
+#moreMenu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--ink);padding:10px 12px;border-radius:8px;font:inherit;cursor:pointer;white-space:normal}
+#moreMenu button:hover,#moreMenu button.on{background:rgba(127,127,127,.18)}
+#moreMenu .mh{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);padding:8px 12px 2px}
+#moreMenu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+/* модальные окна (Помодоро, памятка) */
+.sp-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:700;display:grid;place-items:center;padding:16px}
+.sp-modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;width:min(640px,100%);max-height:90vh;overflow:auto}
+.sp-modal-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card)}
+.sp-modal-x{background:transparent;border:0;color:var(--ink);font-size:18px;cursor:pointer;padding:4px 8px}
+.sp-modal-b{padding:16px;line-height:1.55}
+.sp-modal-b ol{padding-left:20px}.sp-modal-b li{margin:8px 0}.sp-modal-b code{background:rgba(127,127,127,.2);padding:1px 5px;border-radius:4px}
+.pomo-time{font-size:56px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;margin:8px 0}
+.pomo-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.pomo-row button{padding:10px 18px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font:inherit}
+.sp-stat{font-size:16px;margin-bottom:10px}
+/* расписание: чистый экран, как на образце */
+#academicHub .top{display:none!important}
+#academicHub .container{padding:10px 12px}
+#academicHub .page-head{margin:0 0 8px;justify-content:flex-end}
+#academicHub .page-head>div:first-child{display:none}
+#academicHub .page-head .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#academicHub #editSchedule{font-size:12px;padding:5px 10px}
+#academicHub .theme-toggle{display:none!important}
+#academicHub .wk-date{display:flex;gap:6px;align-items:center;margin-right:10px}
+#academicHub .wk-date input{width:auto;padding:5px 8px}
+#academicHub .wk-date button{padding:5px 12px}
+/* материалы: строка, ссылка, меню ⋯ */
+#academicHub .mat-list{margin-top:6px}
+#academicHub .mat-row{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+#academicHub .mat-row.pinned{background:rgba(121,186,255,.08)}
+#academicHub .mat-main{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left;background:transparent!important;border:0!important;color:inherit;text-decoration:none;padding:9px 6px;border-radius:10px;cursor:pointer;font:inherit}
+#academicHub .mat-main:hover{background:rgba(127,127,127,.14)!important}
+#academicHub .mat-main .file-info{min-width:0;flex:1;display:block}
+#academicHub .mat-main .file-info b{display:block;overflow-wrap:anywhere}
+#academicHub .mat-main .file-info small{display:block;color:var(--muted);overflow-wrap:anywhere}
+#academicHub .mat-more{flex:none;width:40px;height:40px;padding:0;font-size:20px;line-height:1;border-radius:10px;background:transparent!important;border:1px solid transparent!important;color:inherit}
+#academicHub .mat-more:hover{border-color:var(--line)!important;background:rgba(127,127,127,.14)!important}
+#academicHub .pill.course{flex:none}
+#academicHub .pin{margin-right:4px}
+#academicHub .mat-menu{position:fixed;z-index:450;min-width:210px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 10px 28px rgba(0,0,0,.4)}
+#academicHub .mat-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:10px 12px;border-radius:8px}
+#academicHub .mat-menu button:hover:not([disabled]){background:rgba(127,127,127,.2)}
+#academicHub .mat-menu button[disabled]{opacity:.4;cursor:default}
+</style>
+<script id="v3-global">
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const more=document.getElementById('navMore'),menu=document.getElementById('moreMenu');
+if(!more||!menu)return;
+function closeMore(){menu.classList.remove('open');more.setAttribute('aria-expanded','false')}
+more.addEventListener('click',e=>{e.stopPropagation();const o=menu.classList.toggle('open');more.setAttribute('aria-expanded',o?'true':'false')});
+document.addEventListener('click',e=>{if(!menu.contains(e.target))closeMore()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMore()});
+document.getElementById('navTheme').addEventListener('click',e=>{e.stopPropagation();const h=document.documentElement;h.classList.add('theme-anim');if(window.__toggleTheme)window.__toggleTheme();setTimeout(()=>h.classList.remove('theme-anim'),400)});
+function toSchedule(){if(!document.body.classList.contains('academic-visible'))document.getElementById('navScheduleHub').click()}
+function modal(title,html,onClose){
+ const o=document.createElement('div');o.className='sp-modal-bg';
+ o.innerHTML='<div class="sp-modal" role="dialog" aria-modal="true"><div class="sp-modal-h"><b></b><button type="button" class="sp-modal-x" aria-label="Закрыть">✕</button></div><div class="sp-modal-b"></div></div>';
+ o.querySelector('b').textContent=title;o.querySelector('.sp-modal-b').innerHTML=html;document.body.appendChild(o);
+ const close=()=>{o.remove();if(onClose)onClose()};
+ o.querySelector('.sp-modal-x').onclick=close;o.addEventListener('click',e=>{if(e.target===o)close()});
+ return{el:o,close}}
+/* --- Помодоро --- */
+const P={mode:'work',left:25*60,run:false,t:0,m:null};
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function pomoPaint(){if(!P.m||!P.m.el.isConnected)return;P.m.el.querySelector('.pomo-time').textContent=fmt(P.left);P.m.el.querySelector('.pomo-mode').textContent=P.mode==='work'?'🍅 Фокус':'☕ Перерыв';P.m.el.querySelector('[data-p=toggle]').textContent=P.run?'⏸ Пауза':'▶ Старт'}
+function pomoTick(){P.left--;if(P.left<=0){P.mode=P.mode==='work'?'break':'work';P.left=(P.mode==='work'?25:5)*60;try{navigator.vibrate&&navigator.vibrate(300)}catch(e){}if(!P.m||!P.m.el.isConnected)pomoOpen()}document.title=(P.run?fmt(P.left)+' · ':'')+'StudyPlay';pomoPaint()}
+function pomoOpen(){
+ if(P.m&&P.m.el.isConnected)return;
+ P.m=modal('Таймер Помодоро','<div class="pomo-mode" style="text-align:center;font-weight:700"></div><div class="pomo-time"></div><div class="pomo-row"><button data-p="toggle"></button><button data-p="reset">↺ Сброс</button><button data-p="skip">⏭ Пропустить</button></div><p style="text-align:center;opacity:.7;margin-bottom:0">25 минут работы · 5 минут отдыха. Таймер идёт, даже если закрыть окно.</p>');
+ P.m.el.addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const a=b.dataset.p;
+  if(a==='toggle'){if(P.run){clearInterval(P.t);P.run=false;document.title='StudyPlay'}else{P.run=true;P.t=setInterval(pomoTick,1000)}}
+  else if(a==='reset'){clearInterval(P.t);P.run=false;P.mode='work';P.left=25*60;document.title='StudyPlay'}
+  else if(a==='skip'){P.mode=P.mode==='work'?'break':'work';P.left=(P.mode==='work'?25:5)*60}
+  pomoPaint()});
+ pomoPaint()}
+/* --- памятка автора --- */
+function authorGuide(){modal('Памятка для автора: обновление контента через GitHub',`<ol>
+<li><b>Обновление расписания.</b> Отредактируйте файл <code>data/schedule.json</code> (или нажмите «Экспорт для GitHub» в меню «⋯ Ещё» — приложение скачает готовые <code>schedule.json</code> и <code>manifest.json</code>) и замените файл в репозитории.</li>
+<li><b>Добавление материалов и тестов.</b> Загрузите новые файлы (PDF, DOCX, JSON с тестами) в папку <code>data/files/&lt;название_предмета&gt;/</code> вашего репозитория на GitHub.</li>
+<li><b>Обновление манифеста.</b> Отредактируйте <code>data/manifest.json</code>: пропишите пути к новым файлам, их размеры и предмет. Обязательно измените поле <code>"version"</code> (например, с <code>"2026-10-12.1"</code> на <code>"2026-10-19.1"</code>), чтобы приложение студентов распознало обновление.</li>
+<li><b>Публикация.</b> Сделайте <code>git push</code> в ветку <code>main</code> / <code>gh-pages</code> — GitHub Pages обновит сайт за 1–2 минуты. Личные данные студентов (заметки, свои ссылки, закрепления, собственное расписание) при этом не стираются.</li></ol>
+<p><b>Пример manifest.json:</b></p><pre style="white-space:pre-wrap;background:rgba(127,127,127,.15);padding:10px;border-radius:8px;font-size:12px">{
+  "version": "2026-10-19.1",
+  "files": [
+    {"subject":"Философия","kind":"material","name":"Лекция 1.pdf","path":"data/files/Философия/Лекция 1.pdf","size":123456},
+    {"subject":"Философия","kind":"test","name":"Тест 1.json","path":"data/files/Философия/Тест 1.json","size":2048}
+  ],
+  "links": [
+    {"subject":"Философия","name":"Чат группы","url":"https://t.me/example","note":""}
+  ]
+}</pre>
+<p style="opacity:.8">Если сайт открыт как файл (file://) или нет интернета, используется последняя сохранённая копия данных курса либо встроенное расписание.</p>`)}
+menu.addEventListener('click',e=>{const b=e.target.closest('[data-act]');closeMore();if(!b)return;const a=b.dataset.act,H=window.studyPlayHub||{};
+ if(a==='sched-load'){toSchedule();document.getElementById('scheduleInput').click()}
+ else if(a==='sched-dl'){toSchedule();document.getElementById('downloadScheduleBtn').click()}
+ else if(a==='sched-help'){toSchedule();document.getElementById('scheduleHelpBtn').click()}
+ else if(a==='gh-export'){if(H.exportGithub)H.exportGithub()}
+ else if(a==='gh-refresh'){if(H.refreshBase)H.refreshBase(true)}
+ else if(a==='author'){authorGuide()}
+ else if(a==='pomo'){pomoOpen()}
+ else if(a==='help'){const d=document.querySelector('.helpbook details');if(d){const home=document.querySelector('#spNav [data-v=home]');if(home)home.click();d.open=true;setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60)}}});
+})();
+</script>
+<!--
+ПАМЯТКА ДЛЯ АВТОРА: обновление контента через GitHub
+1. Расписание: отредактируйте data/schedule.json (или меню «⋯ Ещё» → «Экспорт для GitHub») и замените файл в репозитории.
+2. Материалы и тесты: загрузите новые файлы (PDF, DOCX, JSON с тестами) в data/files/<название_предмета>/ вашего репозитория.
+3. Манифест: в data/manifest.json пропишите пути, размеры и предмет каждого файла и ОБЯЗАТЕЛЬНО измените "version"
+   (например, "2026-10-12.1" → "2026-10-19.1"), чтобы приложения студентов заметили обновление.
+4. Публикация: git push в ветку main / gh-pages — GitHub Pages обновится за 1–2 минуты.
+   Личные данные студентов (заметки, ссылки, закрепления, собственное расписание) не стираются.
+Эта же памятка — в меню «⋯ Ещё» → «Памятка для автора».
+-->
 </body>
 </html>

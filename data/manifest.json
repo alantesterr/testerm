@@ -1,6 +1,21 @@
 {
   "version": "2026-10-13.3",
-  "files": [],
+  "files": [
+    {
+      "subject": "Философия",
+      "kind": "test",
+      "name": "Философия докс.docx",
+      "path": "data/files/Философия/Философия докс.docx",
+      "size": 72629
+    },
+    {
+      "subject": "Философия",
+      "kind": "material",
+      "name": "РК1 ИКТ.docx",
+      "path": "data/files/Философия/РК1 ИКТ.docx",
+      "size": 31884
+    }
+  ],
   "links": [
     {
       "subject": "Философия",

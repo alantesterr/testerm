@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
+<meta name="studyplay-build" content="2026-10-20-no-auto-code">
 <script>try{if(localStorage.getItem("studyplay-hub-theme")==="light")document.documentElement.classList.add("theme-light")}catch(e){}</script>
 <title>StudyPlay — видео и тренажёр тестов</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -661,7 +662,6 @@ const KNOWN_TAGS_RE=/<\/?(?:question|variantright|variant_keyboard|variant|quest
 function cleanTxt(s){return String(s??'').replace(KNOWN_TAGS_RE,'').replace(/\r/g,'').replace(/[ \t]+$/gm,'').replace(/\n{3,}/g,'\n\n').trim()}
 function richHtml(text,plain){
  text=String(text??'');
- if(!/```/.test(text)&&text.includes('\n')){const L=text.split('\n'),i=L.findIndex((l,k)=>k>0&&/^(#include|using namespace|int |void |double |string |for\b|while\b|if\b|cout|cin|\s{2,}\S|\t|[{}]$)/.test(l));if(i>0)text=L.slice(0,i).join('\n')+'\n```\n'+L.slice(i).join('\n')+'\n```'}
  let out='';
  text.split(/```[\w+#-]*\n?([\s\S]*?)```/).forEach((p,i)=>{
   if(i%2){out+='<div class="code">'+(plain?'':'<div class="h"><span>C++</span><button type="button" data-copycode>Копировать</button></div>')+'<pre><code>'+hlCode(p.replace(/\n$/,''))+'</code></pre></div>'}

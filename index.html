@@ -642,6 +642,32 @@ const stars=n=>'★'.repeat(Math.min(n||1,3)); const clean=t=>String(t??'').repl
 const blankOpts=()=>[0,1,2,3].map(()=>({t:'',right:false,img:''}));
 const blankQ=()=>({q:'',opts:blankOpts(),img:'',type:'choice',answer:''});
 function bankChanged(){try{localStorage.setItem('studyplay-bank',JSON.stringify({name:bankName,all}))}catch(e){} if(window.__bankUI)window.__bankUI()}
+/* ===== код в вопросах (логика из codetest): ```cpp … ``` и `код` в строке; <conio.h> остаётся текстом ===== */
+const _hlS=w=>new Set(w.split(' '));
+const HL_CTRL=_hlS('if else for while do switch case default break continue return goto try catch throw');
+const HL_KW=_hlS('alignas auto class const constexpr delete enum explicit extern friend inline namespace new noexcept nullptr operator private protected public sizeof static struct template this typedef typename using virtual volatile override final true false');
+const HL_TY=_hlS('int long short unsigned signed char bool float double void string wstring vector map set multiset unordered_map unordered_set queue priority_queue stack deque list array pair tuple size_t cout cin cerr endl std greater less ios_base');
+const HL_HRE=/(\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$))|(^[ \t]*#[ \t]*\w+(?:[ \t]*<[^>\n]*>)?)|("(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?)|(\b\d[\w.]*)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)/gm;
+function hlCode(src){let out='',last=0,m;HL_HRE.lastIndex=0;
+ while((m=HL_HRE.exec(src))){out+=esc(src.slice(last,m.index));last=HL_HRE.lastIndex;const t=m[0];let c=null;
+  if(m[1])c='hl-cm';
+  else if(m[2]){const k=/^(\s*#\s*\w+)(\s*<[^>\n]*>)?/.exec(t);out+=`<span class="hl-pp">${esc(k[1])}</span>`+(k[2]?`<span class="hl-st">${esc(k[2])}</span>`:'');continue}
+  else if(m[3])c='hl-st';else if(m[4])c='hl-nu';
+  else c=HL_CTRL.has(t)?'hl-ct':HL_KW.has(t)?'hl-kw':HL_TY.has(t)?'hl-ty':m[5]?'hl-fn':null;
+  out+=c?`<span class="${c}">${esc(t)}</span>`:esc(t)}
+ return out+esc(src.slice(last))}
+
+const KNOWN_TAGS_RE=/<\/?(?:question|variantright|variant_keyboard|variant|question_image|image_question|questionimage|variant_image|image_variant)(?:\s[^>]*)?>/gi;
+function cleanTxt(s){return String(s??'').replace(KNOWN_TAGS_RE,'').replace(/\r/g,'').replace(/[ \t]+$/gm,'').replace(/\n{3,}/g,'\n\n').trim()}
+function richHtml(text,plain){
+ text=String(text??'');
+ if(!/```/.test(text)&&text.includes('\n')){const L=text.split('\n'),i=L.findIndex((l,k)=>k>0&&/^(#include|using namespace|int |void |double |string |for\b|while\b|if\b|cout|cin|\s{2,}\S|\t|[{}]$)/.test(l));if(i>0)text=L.slice(0,i).join('\n')+'\n```\n'+L.slice(i).join('\n')+'\n```'}
+ let out='';
+ text.split(/```[\w+#-]*\n?([\s\S]*?)```/).forEach((p,i)=>{
+  if(i%2){out+='<div class="code">'+(plain?'':'<div class="h"><span>C++</span><button type="button" data-copycode>Копировать</button></div>')+'<pre><code>'+hlCode(p.replace(/\n$/,''))+'</code></pre></div>'}
+  else if(p.trim()){out+='<div class="tx">'+p.replace(/^\n|\n$/g,'').split(/`([^`\n]+)`/).map((s,k)=>!s?'':k%2?'<code class="ic">'+esc(s)+'</code>':esc(s)).join('')+'</div>'}});
+ return out}
+window.__richHtml=richHtml;
 function dataImg(src,cls='qimg'){return src?`<img class="${cls}" src="${esc(src)}" alt="Иллюстрация">`:''}
 function parse(text){
  const out=[];let skip=0;
@@ -650,11 +676,11 @@ function parse(text){
   const qImg=(raw.match(/<(?:question_image|image_question|questionimage)>([\s\S]*?)<\/(?:question_image|image_question|questionimage)>/i)||[])[1]||'';
   const keyboard=raw.match(/<variant_keyboard>([\s\S]*?)(?=<\/?(?:variant|variantright|variant_keyboard|question_image|variant_image)>|$)/i);
   const body=raw.replace(/<(?:question_image|image_question|questionimage)>[\s\S]*?<\/(?:question_image|image_question|questionimage)>/ig,'');
-  const parts=body.split(/<(variantright|variant|variant_keyboard)>/i), qtxt=clean(parts[0].replace(/<[^>]+>/g,' '));
+  const parts=body.split(/<(variantright|variant|variant_keyboard)>/i), qtxt=cleanTxt(parts[0]);
   let opts=[],type='choice',answer='';
   for(let i=1;i<parts.length;i+=2){const tag=parts[i].toLowerCase(),rawopt=parts[i+1]||'';if(tag==='variant_keyboard'){type='keyboard';answer=clean(rawopt.split(/<\//)[0]);continue}
     const im=(rawopt.match(/<(?:variant_image|image_variant)>([\s\S]*?)<\/(?:variant_image|image_variant)>/i)||[])[1]||'';
-    const t=clean(rawopt.replace(/<(?:variant_image|image_variant)>[\s\S]*?<\/(?:variant_image|image_variant)>/ig,'').replace(/<[^>]+>/g,' '));if(t)opts.push({t,right:tag==='variantright',img:im.trim()});
+    const t=cleanTxt(rawopt.replace(/<(?:variant_image|image_variant)>[\s\S]*?<\/(?:variant_image|image_variant)>/ig,''));if(t)opts.push({t,right:tag==='variantright',img:im.trim()});
   }
   if(!qtxt){skip++;continue}
   if(type==='keyboard'||keyboard){type='keyboard';if(!answer&&keyboard)answer=clean(keyboard[1].split(/<\//)[0]);if(!answer){skip++;continue}out.push({q:qtxt,img:qImg.trim(),type,answer,opts:[],n:1});continue}
@@ -684,14 +710,14 @@ function show(){const q=quiz[cur],a=ans[cur],multi=q.type!=='keyboard'&&q.n>1,do
     const set=new Set([0,1,quiz.length-2,quiz.length-1,cur,cur-1,cur+1,cur-2,cur+2].filter(i=>i>=0&&i<quiz.length));const out=[];let prev=-1;
     [...set].sort((a,b)=>a-b).forEach(i=>{if(prev>=0&&i-prev>1)out.push('<span class="nb-ellipsis">…</span>');out.push(`<button class="nb ${ans[i]?(ans[i].ok?'ok':'bad'):''} ${i===cur?'cur':''}" data-i="${i}">${i+1}</button>`);prev=i});return out.join('')};
   const nav=navPages();const T=trOn[cur]&&tr[cur];
- const opts=(q.opts||[]).map((o,i)=>{let c='';if(a){if(o.right)c='right';else if(a.sel.includes(i))c='wrong'}else if(sel.has(i))c='sel';const on=a?(o.right||a.sel.includes(i)):sel.has(i);return `<button class="opt ${c}" data-o="${i}" ${a?'disabled':''} style="${a?'opacity:1':''}"><span class="mark ${multi?'c':'r'}">${on?(multi?'✓':'●'):''}</span><span>${esc(T?T.o[i]:o.t)}${dataImg(o.img,'opt-media')}${T?`<br><span class="mute">${esc(o.t)}</span>`:''}</span></button>`}).join('');
+ const opts=(q.opts||[]).map((o,i)=>{let c='';if(a){if(o.right)c='right';else if(a.sel.includes(i))c='wrong'}else if(sel.has(i))c='sel';const on=a?(o.right||a.sel.includes(i)):sel.has(i);return `<button class="opt ${c}" data-o="${i}" ${a?'disabled':''} style="${a?'opacity:1':''}"><span class="mark ${multi?'c':'r'}">${on?(multi?'✓':'●'):''}</span><span class="otx">${richHtml(T?T.o[i]:o.t,true)}${dataImg(o.img,'opt-media')}${T?`<br><span class="mute">${esc(o.t)}</span>`:''}</span></button>`}).join('');
  const keyboard=q.type==='keyboard';const answerInput=keyboard?`<label for="keyboardResponse">Введите ответ:</label><input class="kb-answer" id="keyboardResponse" value="${esc(a?.typed??'')}" placeholder="Ваш ответ" ${a?'disabled':''}><div class="mute">Ответ проверяется без учёта регистра и пробелов по краям.</div>${a?`<div class="msg ${a.ok?'info':''}">${a.ok?'Верно':'Неверно'} · Правильный ответ: ${esc(q.answer)}</div>`:''}`:'';
  app.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><span class="mute">${round>1?'Работа над ошибками, раунд '+round+' · ':''}Вопрос ${cur+1} из ${quiz.length} · отвечено ${done}</span><button id="home0">🏠 Главная</button></div><div class="nav">${nav}</div></div>
- <div class="card"><div class="row" style="justify-content:space-between"><span class="stars">${stars(q.n)}</span><span class="mute">${keyboard?'Введите ответ с клавиатуры':multi?'Выберите все верные ответы':'Один верный ответ'}</span></div><div class="qt">${cur+1}. ${esc(T?T.q:q.q)}</div>${dataImg(q.img)}${T?`<div class="mute">${esc(q.q)}</div>`:''}${keyboard?answerInput:opts}
+ <div class="card"><div class="row" style="justify-content:space-between"><span class="stars">${stars(q.n)}</span><span class="mute">${keyboard?'Введите ответ с клавиатуры':multi?'Выберите все верные ответы':'Один верный ответ'}</span></div><div class="qt">${cur+1}. ${richHtml(T?T.q:q.q)}</div>${dataImg(q.img)}${T?`<div class="mute">${richHtml(q.q,true)}</div>`:''}${keyboard?answerInput:opts}
  ${a&&!keyboard?`<div class="msg ${a.ok?'info':''}">${a.ok?'Верно':'Неверно'}</div>`:''}
  <div class="tools" style="margin-top:14px"><button id="lupa">🔍 Лупа</button><button class="sup" id="sup">✨ Сверхпоиск</button><button id="ai">Режим ИИ</button><button id="trb">🌐 ${T?'Оригинал':'Перевести'}</button></div></div>
  <div class="foot"><button id="back" ${cur===0?'disabled':''}>← Назад</button>${keyboard&&!a?'<button class="pri" id="kbdSubmit">Проверить ответ</button>':''}${multi&&!a?`<button class="pri" id="ok" ${sel.size?'':'disabled'}>Ответить</button>`:''}${cur<quiz.length-1?'<button class="pri" id="next">Следующий вопрос →</button>':'<button class="pri" id="fin">Завершить</button>'}</div>`;
- document.querySelectorAll('.nb').forEach(b=>b.onclick=()=>{cur=+b.dataset.i;sel=new Set();show()});document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>pick(+b.dataset.o));$('#home0').onclick=()=>{if(!ans.some(Boolean)||confirm('Выйти на главный экран? Прогресс будет потерян.'))start()};$('#back').onclick=()=>{if(cur>0){cur--;sel=new Set();show()}};const nx=$('#next');if(nx)nx.onclick=()=>{cur++;sel=new Set();show()};const fn=$('#fin');if(fn)fn.onclick=finish;const ok=$('#ok');if(ok)ok.onclick=submit;const ks=$('#kbdSubmit');if(ks)ks.onclick=submitKeyboard;$('#trb').onclick=()=>toggleTr(cur);$('#lupa').onclick=()=>g(q.q+' ответ на русском');$('#sup').onclick=()=>g(prompt_(q));$('#ai').onclick=()=>g(prompt_(q),true);
+ document.querySelectorAll('.nb').forEach(b=>b.onclick=()=>{cur=+b.dataset.i;sel=new Set();show()});document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>pick(+b.dataset.o));$('#home0').onclick=()=>{if(!ans.some(Boolean)||confirm('Выйти на главный экран? Прогресс будет потерян.'))start()};$('#back').onclick=()=>{if(cur>0){cur--;sel=new Set();show()}};const nx=$('#next');if(nx)nx.onclick=()=>{cur++;sel=new Set();show()};const fn=$('#fin');if(fn)fn.onclick=finish;const ok=$('#ok');if(ok)ok.onclick=submit;const ks=$('#kbdSubmit');if(ks)ks.onclick=submitKeyboard;$('#trb').onclick=()=>toggleTr(cur);$('#lupa').onclick=()=>g(q.q.replace(/```\w*/g,'')+' ответ на русском');$('#sup').onclick=()=>g(prompt_(q));$('#ai').onclick=()=>g(prompt_(q),true);
  }
 function prompt_(q){return (`Вопрос: ${q.q}\nВарианты ответа:\n`+(q.opts||[]).map((o,i)=>`${i+1}) ${o.t}`).join('\n')+'\nОтветь на русском языке. Объясни правильный ответ и каждый вариант.').slice(0,1500)}
 async function tx(t){const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ru&dt=t&q='+encodeURIComponent(t));if(!r.ok)throw Error(r.status);return (await r.json())[0].map(x=>x[0]).join('')}
@@ -701,7 +727,7 @@ function pick(i){const q=quiz[cur];if(q.n===1)submitSel([i]);else{sel.has(i)?sel
 function submit(){submitSel([...sel])}
 function submitSel(s){const q=quiz[cur],right=q.opts.map((o,i)=>o.right?i:-1).filter(i=>i>=0),ok=s.length===right.length&&s.every(i=>right.includes(i));ans[cur]={sel:s,ok};sel=new Set();show()}
 function submitKeyboard(){const q=quiz[cur],typed=$('#keyboardResponse').value,ok=clean(typed).toLocaleLowerCase()===clean(q.answer).toLocaleLowerCase();ans[cur]={sel:[],typed,ok};show()}
-function finish(){const okN=ans.filter(a=>a&&a.ok).length,bad=ans.filter(a=>a&&!a.ok).length,skip=ans.length-okN-bad,pct=Math.round(okN/quiz.length*100);const errs=quiz.map((q,i)=>({q,i,a:ans[i]})).filter(x=>!x.a||!x.a.ok).map(x=>`<div class="err"><b>${x.i+1}. ${esc(x.q.q)}</b><br>${x.a?'':'<i>Не отвечен.</i> '}Верно: ${esc(x.q.type==='keyboard'?x.q.answer:x.q.opts.filter(o=>o.right).map(o=>o.t).join('; '))}</div>`).join('');const wrongList=quiz.filter((q,i)=>!ans[i]||!ans[i].ok);const fresh=arr=>shuffle(arr).map(x=>({...x,opts:shuffle(x.opts||[])}));app.innerHTML=`<h1>Результат${round>1?', раунд '+round:''}</h1><div class="card"><div class="big">${pct}%</div><p>Верно: <b>${okN}</b> · Неверно: <b>${bad}</b> · Без ответа: <b>${skip}</b> · Всего: ${quiz.length}</p>${wrongList.length?'<p>Ошибки можно повторить в отдельном раунде.</p>':'<p><b>Ошибок нет. Тест пройден без единой ошибки!</b></p>'}<div class="row">${wrongList.length?`<button class="pri" id="redo">🔁 Работа над ошибками (${wrongList.length})</button>`:''}${round>1?'<button id="full">Весь тест заново</button>':''}<button id="again">Пройти заново</button><button id="home">В начало</button><button id="rev">Вернуться к вопросам</button></div></div>${errs?`<div class="card"><h2>Ошибки и пропуски</h2>${errs}</div>`:''}`;$('#again').onclick=()=>{quiz=shuffle(quiz).map(x=>({...x,opts:shuffle(x.opts||[])}));ans=quiz.map(()=>null);tr={};trOn={};cur=0;show()};const rd=$('#redo');if(rd)rd.onclick=()=>{round++;quiz=fresh(wrongList);ans=quiz.map(()=>null);tr={};trOn={};cur=0;sel=new Set();show()};const fl=$('#full');if(fl)fl.onclick=()=>{round=1;quiz=fresh(fullQuiz);ans=quiz.map(()=>null);tr={};trOn={};cur=0;sel=new Set();show()};$('#home').onclick=start;$('#rev').onclick=()=>{cur=0;show()}}
+function finish(){const okN=ans.filter(a=>a&&a.ok).length,bad=ans.filter(a=>a&&!a.ok).length,skip=ans.length-okN-bad,pct=Math.round(okN/quiz.length*100);const errs=quiz.map((q,i)=>({q,i,a:ans[i]})).filter(x=>!x.a||!x.a.ok).map(x=>`<div class="err"><b>${x.i+1}.</b> ${richHtml(x.q.q,true)}<br>${x.a?'':'<i>Не отвечен.</i> '}Верно: ${esc(x.q.type==='keyboard'?x.q.answer:x.q.opts.filter(o=>o.right).map(o=>o.t).join('; '))}</div>`).join('');const wrongList=quiz.filter((q,i)=>!ans[i]||!ans[i].ok);const fresh=arr=>shuffle(arr).map(x=>({...x,opts:shuffle(x.opts||[])}));app.innerHTML=`<h1>Результат${round>1?', раунд '+round:''}</h1><div class="card"><div class="big">${pct}%</div><p>Верно: <b>${okN}</b> · Неверно: <b>${bad}</b> · Без ответа: <b>${skip}</b> · Всего: ${quiz.length}</p>${wrongList.length?'<p>Ошибки можно повторить в отдельном раунде.</p>':'<p><b>Ошибок нет. Тест пройден без единой ошибки!</b></p>'}<div class="row">${wrongList.length?`<button class="pri" id="redo">🔁 Работа над ошибками (${wrongList.length})</button>`:''}${round>1?'<button id="full">Весь тест заново</button>':''}<button id="again">Пройти заново</button><button id="home">В начало</button><button id="rev">Вернуться к вопросам</button></div></div>${errs?`<div class="card"><h2>Ошибки и пропуски</h2>${errs}</div>`:''}`;$('#again').onclick=()=>{quiz=shuffle(quiz).map(x=>({...x,opts:shuffle(x.opts||[])}));ans=quiz.map(()=>null);tr={};trOn={};cur=0;show()};const rd=$('#redo');if(rd)rd.onclick=()=>{round++;quiz=fresh(wrongList);ans=quiz.map(()=>null);tr={};trOn={};cur=0;sel=new Set();show()};const fl=$('#full');if(fl)fl.onclick=()=>{round=1;quiz=fresh(fullQuiz);ans=quiz.map(()=>null);tr={};trOn={};cur=0;sel=new Set();show()};$('#home').onclick=start;$('#rev').onclick=()=>{cur=0;show()}}
 function problem(q){if(!q.q.trim())return 'нет текста вопроса';if(q.type==='keyboard')return q.answer.trim()?'':'не указан правильный ответ';const o=q.opts.filter(x=>x.t.trim());if(o.length<2)return 'нужно минимум 2 варианта';if(!o.some(x=>x.right))return 'не отмечен верный ответ';if(o.every(x=>x.right))return 'нужен хотя бы один неверный вариант';return ''}
 function stHtml(q){const p=problem(q);return p?`<span class="st r">⚠ ${esc(p)}</span>`:'<span class="st g">✓ готов</span>'}
 function dmsg(t,ok){const e=$('#dmsg');if(e)e.innerHTML=`<div class="msg ${ok?'info':''}">${t}</div>`}
@@ -781,8 +807,8 @@ function openDesignerPreview(){
   function render(){
     const q=dz[i];if(!q||!q.q.trim()){card.innerHTML='<p class="mute">Добавьте и заполните вопрос для предпросмотра.</p><button id="pvClose">Закрыть</button>';$('#pvClose').onclick=()=>ov.classList.remove('show');return}
     const multi=q.type==='choice'&&q.opts.filter(o=>o.right).length>1;
-    const opts=q.type==='keyboard'?`<input id="pvInput" class="kb-answer" placeholder="Ваш ответ">`:q.opts.filter(o=>o.t.trim()).map((o,j)=>`<button class="preview-option" data-o="${j}"><span>○</span><span>${esc(o.t)}${dataImg(o.img,'opt-media')}</span></button>`).join('');
-    card.innerHTML=`<div class="row" style="justify-content:space-between"><b>Предпросмотр · вопрос ${i+1} из ${dz.length}</b><button id="pvClose">✕ Закрыть</button></div><hr style="border-color:#333"><div class="qtext">${esc(q.q)}</div>${dataImg(q.img)}${opts}<div class="row" style="justify-content:space-between;margin-top:14px"><span class="mute">${q.type==='keyboard'?'Ввод ответа':multi?'Можно выбрать несколько':'Выберите один вариант'}</span><button class="btn blue" id="pvCheck">Проверить</button></div><div id="pvMsg"></div><div class="row" style="margin-top:10px"><button id="pvPrev" ${i===0?'disabled':''}>← Предыдущий</button><button id="pvNext" ${i===dz.length-1?'disabled':''}>Следующий →</button></div>`;
+    const opts=q.type==='keyboard'?`<input id="pvInput" class="kb-answer" placeholder="Ваш ответ">`:q.opts.filter(o=>o.t.trim()).map((o,j)=>`<button class="preview-option" data-o="${j}"><span>○</span><span class="otx">${richHtml(o.t,true)}${dataImg(o.img,'opt-media')}</span></button>`).join('');
+    card.innerHTML=`<div class="row" style="justify-content:space-between"><b>Предпросмотр · вопрос ${i+1} из ${dz.length}</b><button id="pvClose">✕ Закрыть</button></div><hr style="border-color:#333"><div class="qtext">${richHtml(q.q)}</div>${dataImg(q.img)}${opts}<div class="row" style="justify-content:space-between;margin-top:14px"><span class="mute">${q.type==='keyboard'?'Ввод ответа':multi?'Можно выбрать несколько':'Выберите один вариант'}</span><button class="btn blue" id="pvCheck">Проверить</button></div><div id="pvMsg"></div><div class="row" style="margin-top:10px"><button id="pvPrev" ${i===0?'disabled':''}>← Предыдущий</button><button id="pvNext" ${i===dz.length-1?'disabled':''}>Следующий →</button></div>`;
     let picked=new Set(),answered=false;
     card.querySelectorAll('.preview-option').forEach(b=>b.onclick=()=>{if(answered)return;const j=+b.dataset.o;if(multi){picked.has(j)?picked.delete(j):picked.add(j)}else picked=new Set([j]);card.querySelectorAll('.preview-option').forEach((x,k)=>x.querySelector('span').textContent=picked.has(k)?'●':'○')});
     $('#pvCheck').onclick=()=>{if(answered)return;answered=true;let ok;if(q.type==='keyboard')ok=clean($('#pvInput').value).toLocaleLowerCase()===clean(q.answer).toLocaleLowerCase();else{const right=q.opts.map((o,j)=>o.right?j:-1).filter(j=>j>=0),s=[...picked];ok=s.length===right.length&&s.every(j=>right.includes(j))}$('#pvMsg').innerHTML=`<div class="msg ${ok?'info':''}">${ok?'✓ Верно — так будет работать проверка.':'✕ Неверно — в реальном тесте будет показан результат.'}</div>`};
@@ -797,7 +823,7 @@ function showImp(list){
   b.innerHTML=`Найдено вопросов: <b>${list.length}</b>. Взять с <input type="number" id="ifrom" min="1" max="${list.length}" value="1"> по <input type="number" id="ito" min="1" max="${list.length}" value="${list.length}"> <button class="pri" id="iadd">Добавить в дизайнер</button>`;
   $('#iadd').onclick=()=>{let a=Math.max(1,parseInt($('#ifrom').value)||1),z=Math.min(list.length,parseInt($('#ito').value)||list.length);if(a>z)return dmsg('Начало диапазона больше конца.');const part=list.slice(a-1,z).map(normalizeQ);if(dz.length===1&&!dz[0].q.trim())dz=[];dz=dz.concat(part);designerManual();dmsg(`Добавлено вопросов: ${part.length}.`,true)};
 }
-function renderList(){ $('#dlist').innerHTML=dz.map((q,i)=>`<div class="card dq" data-q="${i}"><div class="row" style="justify-content:space-between"><b>Вопрос ${i+1}</b><span class="stw">${stHtml(q)}</span><button class="dl" data-a="delq">🗑 Удалить</button></div><textarea data-f="q" rows="2" placeholder="Текст вопроса">${esc(q.q)}</textarea><div class="image-field">Изображение вопроса: <input type="file" accept="image/*" data-img="q">${q.img?'<button data-a="clearimg">Убрать картинку</button>':''}</div>${dataImg(q.img,'preview')}<div class="row"><button data-a="type">${q.type==='keyboard'?'Переключить на варианты ответа':'Переключить на ввод с клавиатуры'}</button><span class="mute">${q.type==='keyboard'?'Проверяется точное значение ответа':'Можно отметить несколько правильных вариантов'}</span></div>${q.type==='keyboard'?`<label>Правильный ответ</label><input data-f="answer" type="text" value="${esc(q.answer)}" placeholder="Например, 100" style="width:100%;padding:10px;margin:6px 0;border-radius:8px">`:`${q.opts.map((o,j)=>`<div class="oprow" data-o="${j}"><label class="rt ${o.right?'on':''}"><input type="checkbox" data-f="r" ${o.right?'checked':''}>верный</label><input type="text" data-f="t" placeholder="Вариант ${j+1}" value="${esc(o.t)}"><button data-a="delo" title="Удалить вариант">✕</button><div class="image-field">Картинка варианта: <input type="file" accept="image/*" data-img="o">${o.img?'<button data-a="clearimg">Убрать</button>':''}</div>${dataImg(o.img,'preview')}</div>`).join('')}<button data-a="addo">+ Вариант</button>`}</div>`).join('')}
+function renderList(){ $('#dlist').innerHTML=dz.map((q,i)=>`<div class="card dq" data-q="${i}"><div class="row" style="justify-content:space-between"><b>Вопрос ${i+1}</b><span class="stw">${stHtml(q)}</span><button class="dl" data-a="delq">🗑 Удалить</button></div><textarea data-f="q" rows="2" placeholder="Текст вопроса">${esc(q.q)}</textarea><div class="image-field">Изображение вопроса: <input type="file" accept="image/*" data-img="q">${q.img?'<button data-a="clearimg">Убрать картинку</button>':''}</div>${dataImg(q.img,'preview')}<div class="row"><button data-a="type">${q.type==='keyboard'?'Переключить на варианты ответа':'Переключить на ввод с клавиатуры'}</button><span class="mute">${q.type==='keyboard'?'Проверяется точное значение ответа':'Можно отметить несколько правильных вариантов'}</span></div>${q.type==='keyboard'?`<label>Правильный ответ</label><input data-f="answer" type="text" value="${esc(q.answer)}" placeholder="Например, 100" style="width:100%;padding:10px;margin:6px 0;border-radius:8px">`:`${q.opts.map((o,j)=>`<div class="oprow" data-o="${j}"><label class="rt ${o.right?'on':''}"><input type="checkbox" data-f="r" ${o.right?'checked':''}>верный</label><textarea data-f="t" rows="1" placeholder="Вариант ${j+1}">${esc(o.t)}</textarea><button data-a="delo" title="Удалить вариант">✕</button><div class="image-field">Картинка варианта: <input type="file" accept="image/*" data-img="o">${o.img?'<button data-a="clearimg">Убрать</button>':''}</div>${dataImg(o.img,'preview')}</div>`).join('')}<button data-a="addo">+ Вариант</button>`}</div>`).join('')}
 function fileData(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(f)})}
 function serializeQ(q){if(q.type==='keyboard')return {q:q.q,img:q.img||'',type:'keyboard',answer:q.answer,opts:[],n:1};const opts=q.opts.filter(x=>x.t.trim()).map(o=>({t:o.t.trim(),right:!!o.right,img:o.img||''}));return {q:q.q.trim(),img:q.img||'',type:'choice',opts,n:opts.filter(o=>o.right).length}}
 function validateBuild(){const bad=dz.map((q,i)=>problem(q)?`№${i+1}: ${problem(q)}`:'').filter(Boolean);if(bad.length){dmsg('Исправьте вопросы:<br>'+bad.map(esc).join('<br>'));return false}return true}
@@ -1429,9 +1455,9 @@ function buildQuiz(){
   function applyTr(){
     const q=batch[qi],T=trOn[qi]&&trc[qi],qt=byId('qtext');
     if(!qt)return;
-    qt.innerHTML=T?`${esc(T.q)}<div class="qorig">${esc(q.q)}</div>`:esc(q.q);
+    qt.innerHTML=T?`${(window.__richHtml||esc)(T.q)}<div class="qorig">${(window.__richHtml||esc)(q.q,true)}</div>`:(window.__richHtml||esc)(q.q);
     document.querySelectorAll('#qopts .qopt').forEach((b,k)=>{
-      b.querySelector('.qot').innerHTML=T?`${esc(T.o[k])}<div class="qorig">${esc(q.opts[k].t)}</div>`:esc(q.opts[k].t);
+      b.querySelector('.qot').innerHTML=T?`${(window.__richHtml||esc)(T.o[k],true)}<div class="qorig">${(window.__richHtml||esc)(q.opts[k].t,true)}</div>`:(window.__richHtml||esc)(q.opts[k].t,true);
     });
     const tb=byId('qtr');if(tb){tb.disabled=false;tb.textContent='🌐 '+(T?'Оригинал':'Перевести')}
   }
@@ -1456,8 +1482,8 @@ function buildQuiz(){
       :`Видео на паузе (${fmt(savedPos)}). Вернуться к просмотру можно в любой момент.`;
     shell(`<div class="qnote">${note}</div>
       <div class="qmeta">Вопрос ${qi+1} из ${batch.length} · ${multi?'выберите все верные ответы':'один верный ответ'}</div>
-      <div class="qtext" id="qtext">${esc(q.q)}</div>
-      <div id="qopts">${q.opts.map((o,i)=>`<button type="button" class="qopt" data-i="${i}"><span class="qm ${multi?'c':'r'}"></span><span class="qot">${esc(o.t)}</span></button>`).join('')}</div>
+      <div class="qtext" id="qtext">${(window.__richHtml||esc)(q.q)}</div>
+      <div id="qopts">${q.opts.map((o,i)=>`<button type="button" class="qopt" data-i="${i}"><span class="qm ${multi?'c':'r'}"></span><span class="qot">${(window.__richHtml||esc)(o.t,true)}</span></button>`).join('')}</div>
       <div class="qtools">
         <button type="button" id="qlupa" title="Найти этот вопрос в Google">🔍 Лупа</button>
         <button type="button" class="sup" id="qsup" title="Google-запрос: вопрос и все варианты с просьбой разобрать каждый">✨ Сверхпоиск</button>
@@ -1500,7 +1526,7 @@ function buildQuiz(){
     done++;
     results.forEach(r=>{r.ok?errs.delete(r.q.src):errs.add(r.q.src)});
     const okN=results.filter(r=>r.ok).length,pct=Math.round(okN/batch.length*100);
-    const bad=results.filter(r=>!r.ok).map(r=>`<div class="err"><b>${esc(r.q.q)}</b><br>Верно: ${esc(r.right.map(i=>r.q.opts[i].t).join('; '))}</div>`).join('');
+    const bad=results.filter(r=>!r.ok).map(r=>`<div class="err"><b>${(window.__richHtml||esc)(r.q.q,true)}</b><br>Верно: ${esc(r.right.map(i=>r.q.opts[i].t).join('; '))}</div>`).join('');
     const seen=total-pool.length;
     const stat=`Пройдено вопросов базы: ${seen} из ${total}${errs.size?' · ошибок накоплено: '+errs.size:''}`;
     const left=pool.length
@@ -1786,12 +1812,12 @@ function parse(text){
   const qImg=(raw.match(/<(?:question_image|image_question|questionimage)>([\s\S]*?)<\/(?:question_image|image_question|questionimage)>/i)||[])[1]||'';
   const keyboard=raw.match(/<variant_keyboard>([\s\S]*?)(?=<\/?(?:variant|variantright|variant_keyboard|question_image|variant_image)>|$)/i);
   const body=raw.replace(/<(?:question_image|image_question|questionimage)>[\s\S]*?<\/(?:question_image|image_question|questionimage)>/ig,'');
-  const parts=body.split(/<(variantright|variant|variant_keyboard)>/i),qtxt=clean(parts[0].replace(/<[^>]+>/g,' '));
+  const parts=body.split(/<(variantright|variant|variant_keyboard)>/i),qtxt=cleanTxt(parts[0]);
   let opts=[],answer='',kbd=false;
   for(let i=1;i<parts.length;i+=2){const tag=parts[i].toLowerCase(),ro=parts[i+1]||'';
    if(tag==='variant_keyboard'){kbd=true;answer=clean(ro.split(/<\//)[0]);continue}
    const im=(ro.match(/<(?:variant_image|image_variant)>([\s\S]*?)<\/(?:variant_image|image_variant)>/i)||[])[1]||'';
-   const t=clean(ro.replace(/<(?:variant_image|image_variant)>[\s\S]*?<\/(?:variant_image|image_variant)>/ig,'').replace(/<[^>]+>/g,' '));
+   const t=cleanTxt(ro.replace(/<(?:variant_image|image_variant)>[\s\S]*?<\/(?:variant_image|image_variant)>/ig,''));
    if(t)opts.push({t,right:tag==='variantright',img:im.trim()})}
   if(!qtxt){fail('нет текста вопроса');continue}
   if(kbd||keyboard){if(!answer&&keyboard)answer=clean(keyboard[1].split(/<\//)[0]);if(!answer){fail('не указан правильный ответ для ввода с клавиатуры');continue}out.push({q:qtxt,img:qImg.trim(),type:'keyboard',answer,opts:[],n:1});continue}
@@ -1936,7 +1962,7 @@ function spCard(q,i,k,sp){const kb=isKb(q);
  ${sp?`<div class="image-field">Изображение вопроса: <input type="file" accept="image/*" data-img="q">${q.img?'<button data-a="clearimg">Убрать картинку</button>':''}</div>${dataImg(q.img,'preview')}
  <div class="row"><button data-a="type">${kb?'Переключить на варианты ответа':'Переключить на ввод с клавиатуры'}</button><span class="mute">${kb?'Проверяется точное значение ответа':'Варианты могут содержать картинки'}</span></div>`:''}
  ${kb?`<label>Правильный ответ</label><input data-f="answer" type="text" value="${esc(q.answer)}" placeholder="Например, 100" style="width:100%;padding:10px;margin:6px 0;border-radius:8px">`
- :`${!q.opts.length?`<div class="msg" style="margin:8px 0">Вопрос без вариантов ответа. Добавьте варианты либо переведите вопрос в специальные (картинка или ввод с клавиатуры).<div class="designer-actions" style="margin-top:8px"><button data-a="addopts" class="pri">+ Добавить варианты</button>${sp?'':'<button data-a="tospecial">→ Сделать специальным</button>'}</div></div>`:''}${q.opts.map((o,j)=>`<div class="oprow" data-o="${j}" style="flex-wrap:wrap"><label class="rt ${o.right?'on':''}"><input type="checkbox" data-f="r" ${o.right?'checked':''}>верный</label><input type="text" data-f="t" placeholder="Вариант ${j+1}" value="${esc(o.t)}"><button data-a="delo" title="Удалить вариант">✕</button>${sp?`<div class="image-field" style="width:100%">Картинка варианта: <input type="file" accept="image/*" data-img="o">${o.img?'<button data-a="clearimg">Убрать</button>':''}</div>${dataImg(o.img,'preview')}`:''}</div>`).join('')}<button data-a="addo">+ Вариант</button>`}</div>`}
+ :`${!q.opts.length?`<div class="msg" style="margin:8px 0">Вопрос без вариантов ответа. Добавьте варианты либо переведите вопрос в специальные (картинка или ввод с клавиатуры).<div class="designer-actions" style="margin-top:8px"><button data-a="addopts" class="pri">+ Добавить варианты</button>${sp?'':'<button data-a="tospecial">→ Сделать специальным</button>'}</div></div>`:''}${q.opts.map((o,j)=>`<div class="oprow" data-o="${j}" style="flex-wrap:wrap"><label class="rt ${o.right?'on':''}"><input type="checkbox" data-f="r" ${o.right?'checked':''}>верный</label><textarea data-f="t" rows="1" placeholder="Вариант ${j+1}">${esc(o.t)}</textarea><button data-a="delo" title="Удалить вариант">✕</button>${sp?`<div class="image-field" style="width:100%">Картинка варианта: <input type="file" accept="image/*" data-img="o">${o.img?'<button data-a="clearimg">Убрать</button>':''}</div>${dataImg(o.img,'preview')}`:''}</div>`).join('')}<button data-a="addo">+ Вариант</button>`}</div>`}
 function renderList(){const L=$('#dlist');if(!L)return;const sp=edStep===2;
  const idx=dz.map((q,i)=>i).filter(i=>isSpecial(dz[i])===sp);
  if(sp)idx.forEach(i=>dz[i].special=true);
@@ -1987,7 +2013,7 @@ try{const c=parseInt(localStorage.getItem('studyplay-cnt'));if(c>0)spCnt=c}catch
 const spZone=document.getElementById('testZoneDock'),spDock=document.getElementById('testerDockControls'),spAnchor=document.createComment('zone');
 spZone.before(spAnchor);
 const spNav=document.createElement('nav');spNav.id='spNav';spNav.setAttribute('aria-label','Главное меню');
-spNav.innerHTML='<span class="brand-sm">StudyPlay</span><button type="button" class="navb" data-v="schedule" id="navScheduleHub">📅 Расписание</button><button type="button" class="navb" data-v="home">✍️ Тестер</button><div class="navr"><button type="button" class="navb icon" id="navTheme" title="Светлая / тёмная тема" aria-label="Сменить тему">🌓</button><button type="button" class="navb" id="navMore" aria-haspopup="true" aria-expanded="false">⋯ Ещё</button><div id="moreMenu" role="menu"><div class="mh">Разделы</div><button type="button" data-v="designer">✏️ Дизайнер тестов</button><button type="button" data-v="player" id="navPlayer">▶ Плеер</button><button type="button" data-v="pw" id="navPw">🔑 Ввод пароля</button><button type="button" data-act="pomo">🍅 Таймер Помодоро</button><hr><div class="mh">Расписание</div><button type="button" data-act="sched-load">📤 Загрузить расписание (JSON, .studyplay, HTML)</button><button type="button" data-act="sched-dl">📥 Скачать расписание</button><button type="button" data-act="sched-help">ⓘ Инструкция по расписанию</button><hr><div class="mh">Данные курса (GitHub)</div><button type="button" data-act="gh-refresh">🔄 Обновить данные курса</button><button type="button" data-act="gh-export">⬆ Экспорт для GitHub</button><button type="button" data-act="author">📋 Памятка для автора</button><hr><button type="button" data-act="help">📘 Инструкция StudyPlay</button></div></div>';
+spNav.innerHTML='<span class="brand-sm">StudyPlay</span><button type="button" class="navb" data-v="schedule" id="navScheduleHub">📅 Расписание</button><button type="button" class="navb" data-v="home">✍️ Тестер</button><button type="button" class="navb" id="navStopwatch">⏱ Секундомер</button><div class="navr"><button type="button" class="navb icon" id="navTheme" title="Светлая / тёмная тема" aria-label="Сменить тему">🌓</button><button type="button" class="navb" id="navMore" aria-haspopup="true" aria-expanded="false">⋯ Ещё</button><div id="moreMenu" role="menu"><button type="button" data-v="designer">✏️ Дизайнер тестов</button><button type="button" data-v="player" id="navPlayer">▶ Плеер</button><button type="button" data-v="pw" id="navPw">🔑 Ввод пароля</button><hr><button type="button" data-act="sched-load">📤 Загрузить расписание</button><button type="button" data-act="sched-dl">📥 Скачать расписание</button><button type="button" data-act="sched-help">ⓘ Как загрузить расписание</button><hr><button type="button" data-act="gh-refresh">🔄 Обновить данные курса</button><button type="button" data-act="gh-schedule">⬇ Скачать schedule.json</button><button type="button" data-act="gh-manifest">⬇ Скачать manifest.json</button><button type="button" data-act="author">📋 Памятка для автора</button></div></div>';
 document.body.prepend(spNav);
 function spGate(open){const g=$('#passwordGate');g.classList.toggle('open',!!open);if(open){const st=$('#passwordStatus');if(!st.textContent){st.style.color='#ffd666';st.textContent='Введите пароль, чтобы открыть плеер'}setTimeout(()=>$('#playerPassword').focus(),30)}}
 function spMark(){const v=document.body.classList.contains('academic-visible')?'schedule':(document.body.classList.contains('player-unlocked')?'player':spView);
@@ -2640,7 +2666,7 @@ function wireSubjectContent(s){
 /* ===== v3: слои данных (репозиторий GitHub → «базовый», localStorage → «личный») ===== */
 const BASEKEY='studyplay-base-v1';
 /* Встроенное расписание на случай, если нет интернета / сайт открыт как file://.
-   Чтобы вшить расписание группы ИР252: меню «⋯ Ещё» → «Экспорт для GitHub», откройте schedule.json
+   Чтобы вшить расписание группы ИР252: меню «⋯ Ещё» → «Скачать schedule.json» / «Скачать manifest.json», откройте schedule.json
    и вставьте его subjects и schedule сюда. */
 const BUILTIN_BASE={version:'builtin-ИР252',group:'ИР252',timeSlots:DEFAULT_TIMES.map((t,i)=>({id:'slot'+i,start:t[0],end:t[1]})),subjects:[],schedule:[],files:[]};
 let base=null;try{base=JSON.parse(localStorage.getItem(BASEKEY)||'null')}catch(e){}
@@ -2693,19 +2719,18 @@ function useCourse(){
  if(!confirm('Показать расписание курса? Ваше личное расписание будет убрано. Предметы, материалы, ссылки, тесты и заметки сохранятся.'))return;
  data.scheduleOwn=false;data.schedule=[];applyBase();save();render();toast('Показано расписание курса')}
 function baseChip(){const B=base||BUILTIN_BASE;
- return(data.baseVersion?`<span class="pill" title="Базовый слой из репозитория курса">📚 от курса · ${esc(data.baseVersion)}</span>`:'')
+ return(data.baseVersion&&!/^builtin/.test(data.baseVersion)?`<span class="pill" title="Базовый слой из репозитория курса">📚 от курса · ${esc(data.baseVersion)}</span>`:'')
   +(data.scheduleOwn&&B.schedule&&B.schedule.length?'<button type="button" onclick="window.studyPlayHub.useCourse()">↺ Расписание курса</button>':'')}
 function nextVersion(){const t=new Date().toISOString().slice(0,10),m=String(base&&base.version||'').match(/^(\d{4}-\d{2}-\d{2})\.(\d+)$/);return m&&m[1]===t?t+'.'+(+m[2]+1):t+'.1'}
-function exportGithub(){
+function exportGithub(which){
  const safe=n=>String(n||'').replace(/[\\/:*?"<>|]+/g,'_').trim()||'предмет',ver=nextVersion(),files=[];
  for(const s of data.subjects){const dir=safe(cleanName(s.name));
   for(const[arr,kind]of[[s.materials,'material'],[s.tests,'test']])for(const f of arr||[]){
    if(f.kind==='link')files.push({subject:s.name,kind:'link',name:f.name,url:f.url,note:f.note||''});
    else files.push({subject:s.name,kind,name:f.name,path:f.base&&f.path?f.path:`data/files/${dir}/${f.name}`,size:f.size||0})}}
  const sched={version:ver,updatedAt:new Date().toISOString(),timeSlots:data.timeSlots,subjects:data.subjects.map(s=>({id:s.id,code:s.code||'',name:s.name,teacher:s.teacher||''})),schedule:data.schedule};
- downloadText(JSON.stringify(sched,null,2),'schedule.json','application/json');
- setTimeout(()=>downloadText(JSON.stringify({version:ver,files},null,2),'manifest.json','application/json'),500);
- toast('Скачаны schedule.json и manifest.json (версия '+ver+'). Положите их в папку data/ репозитория, а сами файлы — в data/files/<предмет>/.')}
+ if(which==='manifest'){downloadText(JSON.stringify({version:ver,files},null,2),'manifest.json','application/json');toast('Скачан manifest.json (версия '+ver+'). Положите его в папку data/ репозитория, а сами файлы — в data/files/<предмет>/.')}
+ else{downloadText(JSON.stringify(sched,null,2),'schedule.json','application/json');toast('Скачан schedule.json (версия '+ver+'). Положите его в папку data/ репозитория.')}}
 window.studyPlayHub={refreshBase,useCourse,exportGithub,infoModal};
 
 /* ===== v3: безопасный импорт (слияние); сначала проверка, потом применение ===== */
@@ -2869,9 +2894,6 @@ html.theme-light #spNav .navb.on{background:#e6ecf8;color:#1c2433}
 .sp-modal-x{background:transparent;border:0;color:var(--ink);font-size:18px;cursor:pointer;padding:4px 8px}
 .sp-modal-b{padding:16px;line-height:1.55}
 .sp-modal-b ol{padding-left:20px}.sp-modal-b li{margin:8px 0}.sp-modal-b code{background:rgba(127,127,127,.2);padding:1px 5px;border-radius:4px}
-.pomo-time{font-size:56px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;margin:8px 0}
-.pomo-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.pomo-row button{padding:10px 18px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font:inherit}
 .sp-stat{font-size:16px;margin-bottom:10px}
 /* расписание: чистый экран, как на образце */
 #academicHub .top{display:none!important}
@@ -2883,7 +2905,9 @@ html.theme-light #spNav .navb.on{background:#e6ecf8;color:#1c2433}
 #academicHub .theme-toggle{display:none!important}
 #academicHub .wk-date{display:flex;gap:6px;align-items:center;margin-right:10px}
 #academicHub .wk-date input{width:auto;padding:5px 8px}
-#academicHub .wk-date button{padding:5px 12px}
+#academicHub .wk-date{flex:none;flex-wrap:nowrap}
+#academicHub .wk-date input{font-size:14px;height:34px;flex:none}
+#academicHub .wk-date button{padding:0 14px;height:34px;font-size:14px;white-space:nowrap;flex:none;width:auto}
 /* материалы: строка, ссылка, меню ⋯ */
 #academicHub .mat-list{margin-top:6px}
 #academicHub .mat-row{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
@@ -2901,6 +2925,44 @@ html.theme-light #spNav .navb.on{background:#e6ecf8;color:#1c2433}
 #academicHub .mat-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:10px 12px;border-radius:8px}
 #academicHub .mat-menu button:hover:not([disabled]){background:rgba(127,127,127,.2)}
 #academicHub .mat-menu button[disabled]{opacity:.4;cursor:default}
+/* ===== секундомер и плавающий виджет ===== */
+#spNav .navb.on#navStopwatch{background:#1d2b38;color:#fff}
+html.theme-light #spNav .navb.on#navStopwatch{background:#e6ecf8;color:#1c2433}
+@media(max-width:480px){#spNav{gap:0;padding-left:4px;padding-right:4px}#spNav .navb{padding:8px 5px;font-size:12px;white-space:nowrap}#spNav .navb.icon{padding:8px 6px}#spNav .navr{gap:0}#spNav .brand-sm{display:none}}
+@media(max-width:360px){#spNav .navb{padding:8px 3px;font-size:11.5px}}
+#swView{position:fixed;left:0;right:0;bottom:0;z-index:150;background:var(--bg);color:var(--ink);overflow:auto;display:grid;place-items:center;padding:16px}
+#swView[hidden]{display:none}
+.sw-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px 20px;width:min(520px,100%);text-align:center}
+.sw-card h2{margin:0 0 18px;font-size:20px}
+.sw-big{display:flex;justify-content:center;align-items:flex-start;gap:8px;margin:8px 0 24px;font-variant-numeric:tabular-nums}
+.sw-big div{display:flex;flex-direction:column;align-items:center;min-width:64px}
+.sw-big b{font-size:clamp(40px,12vw,68px);line-height:1.1;font-weight:800}
+.sw-big small{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+.sw-big i{font-style:normal;font-size:clamp(36px,10vw,60px);line-height:1.15;font-weight:700;opacity:.6}
+.sw-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.sw-btns button{padding:12px 22px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;min-width:110px}
+.sw-btns button.sw-go{background:var(--acc);border-color:var(--acc);color:#fff}
+.sw-btns button:disabled{opacity:.4;cursor:default}
+#swWidget{position:fixed;right:12px;bottom:12px;z-index:650;display:flex;align-items:center;gap:4px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:4px 6px;box-shadow:0 6px 18px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+#swWidget button{border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;width:32px;height:32px;border-radius:50%;padding:0;line-height:1;display:grid;place-items:center}
+#swWidget button:hover{background:rgba(127,127,127,.22)}
+#swWidget .sw-t{font-weight:700;font-size:15px;padding:0 4px}
+#swWidget.run .sw-ico{color:#4cd08a}
+#swWidget.min .sw-t,#swWidget.min .sw-mini{display:none}
+#swWidget.min{padding:3px}
+/* ===== код в вопросах ===== */
+.tx{white-space:pre-wrap;word-break:break-word}
+.qt>.tx:first-child{display:inline}
+.code{background:#0d1117;color:#e6edf3;border-radius:10px;margin:8px 0;overflow:hidden;text-align:left;cursor:auto;font-weight:400}
+.code .h{display:flex;justify-content:space-between;align-items:center;background:#161b22;padding:4px 8px;font:12px system-ui;color:#8b949e}
+.code .h button{background:none!important;border:0!important;color:#8b949e!important;padding:2px 8px;font-size:12px;cursor:pointer;width:auto;min-height:0}
+.code pre{margin:0;padding:12px;overflow-x:auto;font:13.5px/1.5 ui-monospace,Consolas,"Cascadia Mono",monospace;white-space:pre;tab-size:4;background:transparent;color:inherit}
+.code code{font:inherit;background:none;padding:0;color:inherit}
+code.ic{background:#0d1117;color:#e6edf3;padding:1px 6px;border-radius:5px;font:90% ui-monospace,Consolas,monospace}
+.hl-pp{color:#e06ccf}.hl-st{color:#ce9178}.hl-cm{color:#8b949e;font-style:italic}.hl-ct{color:#c586c0}.hl-kw{color:#569cd6}.hl-ty{color:#4ec9b0}.hl-fn{color:#dcdcaa}.hl-nu{color:#b5cea8}
+.otx,.qot{min-width:0;flex:1}
+.otx .tx,.qot .tx{display:inline}
+.oprow textarea{flex:1;min-width:0;margin:0;min-height:42px;resize:vertical}
 </style>
 <script id="v3-global">
 (function(){
@@ -2913,7 +2975,7 @@ more.addEventListener('click',e=>{e.stopPropagation();const o=menu.classList.tog
 document.addEventListener('click',e=>{if(!menu.contains(e.target))closeMore()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMore()});
 document.getElementById('navTheme').addEventListener('click',e=>{e.stopPropagation();const h=document.documentElement;h.classList.add('theme-anim');if(window.__toggleTheme)window.__toggleTheme();setTimeout(()=>h.classList.remove('theme-anim'),400)});
-function toSchedule(){if(!document.body.classList.contains('academic-visible'))document.getElementById('navScheduleHub').click()}
+function toSchedule(){if(window.__swClose)window.__swClose();if(!document.body.classList.contains('academic-visible'))document.getElementById('navScheduleHub').click()}
 function modal(title,html,onClose){
  const o=document.createElement('div');o.className='sp-modal-bg';
  o.innerHTML='<div class="sp-modal" role="dialog" aria-modal="true"><div class="sp-modal-h"><b></b><button type="button" class="sp-modal-x" aria-label="Закрыть">✕</button></div><div class="sp-modal-b"></div></div>';
@@ -2921,20 +2983,6 @@ function modal(title,html,onClose){
  const close=()=>{o.remove();if(onClose)onClose()};
  o.querySelector('.sp-modal-x').onclick=close;o.addEventListener('click',e=>{if(e.target===o)close()});
  return{el:o,close}}
-/* --- Помодоро --- */
-const P={mode:'work',left:25*60,run:false,t:0,m:null};
-const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-function pomoPaint(){if(!P.m||!P.m.el.isConnected)return;P.m.el.querySelector('.pomo-time').textContent=fmt(P.left);P.m.el.querySelector('.pomo-mode').textContent=P.mode==='work'?'🍅 Фокус':'☕ Перерыв';P.m.el.querySelector('[data-p=toggle]').textContent=P.run?'⏸ Пауза':'▶ Старт'}
-function pomoTick(){P.left--;if(P.left<=0){P.mode=P.mode==='work'?'break':'work';P.left=(P.mode==='work'?25:5)*60;try{navigator.vibrate&&navigator.vibrate(300)}catch(e){}if(!P.m||!P.m.el.isConnected)pomoOpen()}document.title=(P.run?fmt(P.left)+' · ':'')+'StudyPlay';pomoPaint()}
-function pomoOpen(){
- if(P.m&&P.m.el.isConnected)return;
- P.m=modal('Таймер Помодоро','<div class="pomo-mode" style="text-align:center;font-weight:700"></div><div class="pomo-time"></div><div class="pomo-row"><button data-p="toggle"></button><button data-p="reset">↺ Сброс</button><button data-p="skip">⏭ Пропустить</button></div><p style="text-align:center;opacity:.7;margin-bottom:0">25 минут работы · 5 минут отдыха. Таймер идёт, даже если закрыть окно.</p>');
- P.m.el.addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const a=b.dataset.p;
-  if(a==='toggle'){if(P.run){clearInterval(P.t);P.run=false;document.title='StudyPlay'}else{P.run=true;P.t=setInterval(pomoTick,1000)}}
-  else if(a==='reset'){clearInterval(P.t);P.run=false;P.mode='work';P.left=25*60;document.title='StudyPlay'}
-  else if(a==='skip'){P.mode=P.mode==='work'?'break':'work';P.left=(P.mode==='work'?25:5)*60}
-  pomoPaint()});
- pomoPaint()}
 /* --- памятка автора --- */
 function authorGuide(){modal('Памятка для автора: обновление контента через GitHub',`<ol>
 <li><b>Обновление расписания.</b> Отредактируйте файл <code>data/schedule.json</code> (или нажмите «Экспорт для GitHub» в меню «⋯ Ещё» — приложение скачает готовые <code>schedule.json</code> и <code>manifest.json</code>) и замените файл в репозитории.</li>
@@ -2956,16 +3004,70 @@ menu.addEventListener('click',e=>{const b=e.target.closest('[data-act]');closeMo
  if(a==='sched-load'){toSchedule();document.getElementById('scheduleInput').click()}
  else if(a==='sched-dl'){toSchedule();document.getElementById('downloadScheduleBtn').click()}
  else if(a==='sched-help'){toSchedule();document.getElementById('scheduleHelpBtn').click()}
- else if(a==='gh-export'){if(H.exportGithub)H.exportGithub()}
+ else if(a==='gh-schedule'){if(H.exportGithub)H.exportGithub('schedule')}
+ else if(a==='gh-manifest'){if(H.exportGithub)H.exportGithub('manifest')}
  else if(a==='gh-refresh'){if(H.refreshBase)H.refreshBase(true)}
- else if(a==='author'){authorGuide()}
- else if(a==='pomo'){pomoOpen()}
- else if(a==='help'){const d=document.querySelector('.helpbook details');if(d){const home=document.querySelector('#spNav [data-v=home]');if(home)home.click();d.open=true;setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),60)}}});
+ else if(a==='author'){authorGuide()}});
+ 
+})();
+</script>
+<script id="v3-code">
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-copycode]');if(!b)return;e.preventDefault();e.stopPropagation();
+ var pre=b.closest('.code').querySelector('pre'),txt=pre?pre.textContent:'';
+ function done(){b.textContent='Скопировано';setTimeout(function(){b.textContent='Копировать'},1500)}
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,fallback)}else fallback();
+ function fallback(){var t=document.createElement('textarea');t.value=txt;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{document.execCommand('copy');done()}catch(x){b.textContent='Не удалось'}t.remove()}
+},true);
+</script>
+<script id="v3-stopwatch">
+(function(){
+'use strict';
+const KEY='studyplay-stopwatch-v1';
+const nav=document.getElementById('spNav'),btn=document.getElementById('navStopwatch');
+if(!nav||!btn)return;
+let st={acc:0,startedAt:null,min:false};
+try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&typeof x==='object'){st.acc=Math.max(0,+x.acc||0);st.startedAt=x.startedAt?+x.startedAt:null;st.min=!!x.min}}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+const elapsed=()=>st.acc+(st.startedAt?Date.now()-st.startedAt:0);
+const p2=n=>String(n).padStart(2,'0');
+function parts(ms){const t=Math.floor(ms/1000);return[Math.floor(t/3600),Math.floor(t%3600/60),t%60]}
+const fmt=ms=>{const[h,m,s]=parts(ms);return p2(h)+':'+p2(m)+':'+p2(s)};
+/* --- плавающий мини-виджет --- */
+const w=document.createElement('div');w.id='swWidget';w.setAttribute('role','timer');
+w.innerHTML='<button type="button" class="sw-ico" id="swWToggle" aria-label="Свернуть или развернуть секундомер" title="Свернуть / развернуть">⏱</button><span class="sw-t" id="swWTime">00:00:00</span><button type="button" class="sw-mini" id="swWPlay" aria-label="Старт / пауза" title="Старт / пауза">▶</button>';
+document.body.appendChild(w);
+/* --- вкладка «Секундомер» --- */
+const v=document.createElement('section');v.id='swView';v.hidden=true;
+v.innerHTML='<div class="sw-card"><h2>⏱ Секундомер</h2><div class="sw-big" id="swBig" aria-live="off"><div><b id="swH">00</b><small>часы</small></div><i>:</i><div><b id="swM">00</b><small>минуты</small></div><i>:</i><div><b id="swS">00</b><small>секунды</small></div></div><div class="sw-btns"><button type="button" id="swStart" class="sw-go">▶ Старт</button><button type="button" id="swPause">⏸ Пауза</button><button type="button" id="swReset">↺ Сброс</button></div></div>';
+document.body.appendChild(v);
+const $=id=>document.getElementById(id);
+function paint(){
+ const ms=elapsed(),[h,m,s]=parts(ms),run=!!st.startedAt;
+ $('swWTime').textContent=fmt(ms);$('swH').textContent=p2(h);$('swM').textContent=p2(m);$('swS').textContent=p2(s);
+ $('swWPlay').textContent=run?'⏸':'▶';
+ $('swStart').disabled=run;$('swPause').disabled=!run;$('swReset').disabled=!run&&ms===0;
+ w.classList.toggle('min',st.min);w.classList.toggle('run',run);
+ document.title=(run?fmt(ms)+' · ':'')+document.title.replace(/^\d\d:\d\d:\d\d · /,'')}
+function start(){if(st.startedAt)return;st.startedAt=Date.now();persist();paint()}
+function pause(){if(!st.startedAt)return;st.acc+=Date.now()-st.startedAt;st.startedAt=null;persist();paint()}
+function reset(){st.acc=0;st.startedAt=null;persist();paint()}
+$('swStart').onclick=start;$('swPause').onclick=pause;$('swReset').onclick=reset;
+$('swWPlay').onclick=()=>st.startedAt?pause():start();
+$('swWToggle').onclick=()=>{st.min=!st.min;persist();paint()};
+function open(){
+ nav.querySelectorAll('.navb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+ v.style.top=nav.offsetHeight+'px';v.hidden=false;document.body.classList.add('sw-open')}
+function close(){if(v.hidden)return;v.hidden=true;btn.classList.remove('on');document.body.classList.remove('sw-open')}
+window.__swClose=close;
+btn.addEventListener('click',e=>{e.stopPropagation();open()});
+/* любой другой раздел меню закрывает вкладку (capture — раньше основного обработчика) */
+nav.addEventListener('click',e=>{if(e.target.closest('[data-v]'))close()},true);
+setInterval(paint,250);paint();
 })();
 </script>
 <!--
 ПАМЯТКА ДЛЯ АВТОРА: обновление контента через GitHub
-1. Расписание: отредактируйте data/schedule.json (или меню «⋯ Ещё» → «Экспорт для GitHub») и замените файл в репозитории.
+1. Расписание: отредактируйте data/schedule.json (или меню «⋯ Ещё» → «Скачать schedule.json» / «Скачать manifest.json») и замените файл в репозитории.
 2. Материалы и тесты: загрузите новые файлы (PDF, DOCX, JSON с тестами) в data/files/<название_предмета>/ вашего репозитория.
 3. Манифест: в data/manifest.json пропишите пути, размеры и предмет каждого файла и ОБЯЗАТЕЛЬНО измените "version"
    (например, "2026-10-12.1" → "2026-10-19.1"), чтобы приложения студентов заметили обновление.
